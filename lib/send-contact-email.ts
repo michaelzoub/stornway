@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import type { ContactServiceId } from "@/lib/contact-services";
+import { CONTACT_EMAIL } from "@/lib/contact-config";
 
 export interface ContactEmailPayload {
   name: string;
@@ -10,8 +11,6 @@ export interface ContactEmailPayload {
   language: string;
 }
 
-const DEFAULT_TO = "info@stornway.com";
-
 const SERVICE_LABELS: Record<ContactServiceId, string> = {
   landscaping: "Landscaping",
   "pressure-washing": "Pressure washing",
@@ -20,7 +19,7 @@ const SERVICE_LABELS: Record<ContactServiceId, string> = {
 };
 
 function getToEmail(): string {
-  return process.env.CONTACT_TO_EMAIL?.trim() || DEFAULT_TO;
+  return process.env.CONTACT_TO_EMAIL?.trim() || CONTACT_EMAIL;
 }
 
 function escapeHtml(value: string): string {
@@ -78,7 +77,12 @@ async function sendViaResend(payload: ContactEmailPayload): Promise<boolean> {
     }),
   });
 
-  return response.ok;
+  if (!response.ok) {
+    console.error("[contact] Resend failed:", await response.text());
+    return false;
+  }
+
+  return true;
 }
 
 async function sendViaSmtp(payload: ContactEmailPayload): Promise<boolean> {
@@ -91,54 +95,29 @@ async function sendViaSmtp(payload: ContactEmailPayload): Promise<boolean> {
   const port = Number(process.env.SMTP_PORT?.trim() || "587");
   const secure = process.env.SMTP_SECURE?.trim() === "true";
 
-  const transporter = nodemailer.createTransport({
-    host,
-    port,
-    secure,
-    auth: { user, pass },
-  });
-
-  await transporter.sendMail({
-    from: process.env.SMTP_FROM?.trim() || user,
-    to: getToEmail(),
-    replyTo: payload.email,
-    subject: buildSubject(payload),
-    html: buildHtml(payload),
-  });
-
-  return true;
-}
-
-async function sendViaFormSubmit(payload: ContactEmailPayload): Promise<boolean> {
-  const to = getToEmail();
-  const services = formatServices(payload.services);
-
-  const response = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(to)}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify({
-      _subject: buildSubject(payload),
-      _template: "table",
-      _captcha: "false",
-      name: payload.name,
-      email: payload.email,
-      phone: payload.phone || "—",
-      services,
-      message: payload.message,
-      language: payload.language,
-    }),
-  });
-
-  if (!response.ok) return false;
-
   try {
-    const data = (await response.json()) as { success?: string };
-    return data.success === "true" || response.ok;
-  } catch {
-    return response.ok;
+    const transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure,
+      auth: { user, pass },
+      connectionTimeout: 10_000,
+      greetingTimeout: 10_000,
+      socketTimeout: 10_000,
+    });
+
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM?.trim() || user,
+      to: getToEmail(),
+      replyTo: payload.email,
+      subject: buildSubject(payload),
+      html: buildHtml(payload),
+    });
+
+    return true;
+  } catch (error) {
+    console.error("[contact] SMTP failed:", error);
+    return false;
   }
 }
 
@@ -147,6 +126,5 @@ export async function sendContactEmail(
 ): Promise<boolean> {
   if (await sendViaResend(payload)) return true;
   if (await sendViaSmtp(payload)) return true;
-  if (await sendViaFormSubmit(payload)) return true;
   return false;
 }

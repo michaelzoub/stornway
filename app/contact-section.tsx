@@ -4,12 +4,14 @@ import Image from "next/image";
 import { ChevronDown } from "lucide-react";
 import { FormEvent, useEffect, useId, useRef, useState } from "react";
 import type { ContactServiceId } from "@/lib/contact-services";
+import { CONTACT_EMAIL } from "@/lib/contact-config";
 import { useLanguage } from "@/lib/i18n/language-provider";
+import { submitContactForm } from "@/lib/submit-contact-form";
 import type { Translations } from "@/lib/i18n/types";
 
 const PHONE_DISPLAY = "514-758-6241";
 const PHONE_TEL = "tel:+15147586241";
-const EMAIL = "info@stornway.com";
+const EMAIL = CONTACT_EMAIL;
 
 interface FormState {
   name: string;
@@ -183,20 +185,16 @@ export function ContactSection() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch("/api/contact", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: form.name.trim(),
-          email: form.email.trim(),
-          phone: form.phone.trim(),
-          services: form.service ? [form.service] : [],
-          message: form.message.trim(),
-          language,
-        }),
+      const sent = await submitContactForm({
+        name: form.name.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+        services: form.service ? [form.service] : [],
+        message: form.message.trim(),
+        language,
       });
 
-      if (!response.ok) {
+      if (!sent) {
         throw new Error("Request failed");
       }
 

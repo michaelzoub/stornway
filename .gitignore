@@ -3,4 +3,6 @@ node_modules
 out
 dist
 .env*
+!.env.example
 *.log
+data/quote-requests.json

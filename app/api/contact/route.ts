@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 import { normalizeContactServices } from "@/lib/contact-services";
+import {
+  createQuoteRequest,
+  markQuoteRequestEmailSent,
+  QuoteRequestsError,
+} from "@/lib/quote-requests";
 import { sendContactEmail } from "@/lib/send-contact-email";
 
 interface ContactPayload {
@@ -46,19 +51,28 @@ export async function POST(request: Request) {
       language,
     };
 
-    const emailed = await sendContactEmail(payload);
+    const quoteRequest = await createQuoteRequest(payload);
+    let emailed = false;
 
-    if (!emailed) {
-      console.error("[contact] Failed to deliver email:", payload);
+    try {
+      emailed = await sendContactEmail(payload);
+    } catch (emailError) {
+      console.warn("[contact] Saved request but email threw:", emailError);
+    }
+
+    if (emailed) await markQuoteRequestEmailSent(quoteRequest.id);
+    if (!emailed) console.warn("[contact] Saved request but email failed.");
+
+    return NextResponse.json({ ok: true, emailSent: emailed });
+  } catch (error) {
+    console.error("[contact] Error:", error);
+    if (error instanceof QuoteRequestsError) {
       return NextResponse.json(
-        { error: "Failed to send message. Please call us directly." },
-        { status: 503 },
+        { error: error.message },
+        { status: error.status },
       );
     }
 
-    return NextResponse.json({ ok: true });
-  } catch (error) {
-    console.error("[contact] Error:", error);
     return NextResponse.json(
       { error: "Failed to submit contact form." },
       { status: 500 },
