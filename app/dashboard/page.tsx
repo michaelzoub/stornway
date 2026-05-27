@@ -1,7 +1,20 @@
-import { LogOut, Mail, Phone, RefreshCw, ShieldCheck } from "lucide-react";
+import { revalidatePath } from "next/cache";
 import {
+  LogOut,
+  Mail,
+  Pencil,
+  Phone,
+  RefreshCw,
+  Save,
+  ShieldCheck,
+  Trash2,
+} from "lucide-react";
+import {
+  deleteQuoteRequest,
+  getQuoteRequestUpdateFromForm,
   getQuoteRequests,
   type QuoteRequest,
+  updateQuoteRequest,
 } from "@/lib/quote-requests";
 import type { ContactServiceId } from "@/lib/contact-services";
 
@@ -13,6 +26,31 @@ const SERVICE_LABELS: Record<ContactServiceId, string> = {
   "window-washing": "Window washing",
   general: "General inquiry",
 };
+
+const SERVICE_OPTIONS = Object.entries(SERVICE_LABELS) as [
+  ContactServiceId,
+  string,
+][];
+
+async function updateDashboardQuoteRequest(formData: FormData) {
+  "use server";
+
+  const id = formData.get("id");
+  if (typeof id !== "string" || !id) return;
+
+  await updateQuoteRequest(id, getQuoteRequestUpdateFromForm(formData));
+  revalidatePath("/dashboard");
+}
+
+async function deleteDashboardQuoteRequest(formData: FormData) {
+  "use server";
+
+  const id = formData.get("id");
+  if (typeof id !== "string" || !id) return;
+
+  await deleteQuoteRequest(id);
+  revalidatePath("/dashboard");
+}
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat("en-CA", {
@@ -132,6 +170,7 @@ export default async function DashboardPage() {
                     <th>Message</th>
                     <th>Submitted</th>
                     <th>Email</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -166,6 +205,112 @@ export default async function DashboardPage() {
                         >
                           {request.email_sent ? "Sent" : "Saved"}
                         </span>
+                      </td>
+                      <td>
+                        <div className="dashboard-row-actions">
+                          <details className="dashboard-edit">
+                            <summary>
+                              <Pencil size={15} aria-hidden="true" />
+                              <span>Edit</span>
+                            </summary>
+                            <form
+                              className="dashboard-edit-form"
+                              action={updateDashboardQuoteRequest}
+                            >
+                              <input type="hidden" name="id" value={request.id} />
+
+                              <label>
+                                <span>Name</span>
+                                <input
+                                  name="name"
+                                  defaultValue={request.name}
+                                  required
+                                />
+                              </label>
+
+                              <label>
+                                <span>Email</span>
+                                <input
+                                  name="email"
+                                  type="email"
+                                  defaultValue={request.email}
+                                  required
+                                />
+                              </label>
+
+                              <label>
+                                <span>Phone</span>
+                                <input name="phone" defaultValue={request.phone} />
+                              </label>
+
+                              <label>
+                                <span>Language</span>
+                                <select name="language" defaultValue={request.language}>
+                                  <option value="en">English</option>
+                                  <option value="fr">French</option>
+                                </select>
+                              </label>
+
+                              <fieldset>
+                                <legend>Services</legend>
+                                {SERVICE_OPTIONS.map(([service, label]) => (
+                                  <label key={service}>
+                                    <input
+                                      type="checkbox"
+                                      name="services"
+                                      value={service}
+                                      defaultChecked={request.services.includes(
+                                        service,
+                                      )}
+                                    />
+                                    <span>{label}</span>
+                                  </label>
+                                ))}
+                              </fieldset>
+
+                              <label className="dashboard-edit-message">
+                                <span>Message</span>
+                                <textarea
+                                  name="message"
+                                  defaultValue={request.message}
+                                  required
+                                  rows={4}
+                                />
+                              </label>
+
+                              <label className="dashboard-edit-check">
+                                <input
+                                  type="checkbox"
+                                  name="email_sent"
+                                  defaultChecked={request.email_sent}
+                                />
+                                <span>Email notice sent</span>
+                              </label>
+
+                              <button className="dashboard-save" type="submit">
+                                <Save size={15} aria-hidden="true" />
+                                <span>Save</span>
+                              </button>
+                            </form>
+                          </details>
+
+                          <details className="dashboard-delete-confirm">
+                            <summary>
+                              <Trash2 size={15} aria-hidden="true" />
+                              <span>Delete</span>
+                            </summary>
+                            <form action={deleteDashboardQuoteRequest}>
+                              <input type="hidden" name="id" value={request.id} />
+                              <button
+                                className="dashboard-delete"
+                                type="submit"
+                                aria-label={`Confirm deleting quote request from ${request.name}`}
+                              >
+                                Confirm delete
+                              </button>
+                            </form>
+                          </details>
+                        </div>
                       </td>
                     </tr>
                   ))}

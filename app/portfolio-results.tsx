@@ -2,7 +2,13 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, ChevronsLeftRight } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeftRight,
+  Maximize2,
+  X,
+} from "lucide-react";
 import { useLanguage } from "@/lib/i18n/language-provider";
 import {
   getAlignedObjectPositions,
@@ -100,13 +106,17 @@ function PortfolioServiceBlock({ service }: { service: PortfolioService }) {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [sliderPosition, setSliderPosition] = useState(50);
   const [isDragging, setIsDragging] = useState(false);
+  const [hasDragged, setHasDragged] = useState(false);
   const [isSwitching, setIsSwitching] = useState(false);
+  const [isInspectorOpen, setIsInspectorOpen] = useState(false);
   const [imageAlign, setImageAlign] = useState({
     before: "50% 50%",
     after: "50% 50%",
   });
 
   const stageRef = useRef<HTMLDivElement | null>(null);
+  const dragStageRef = useRef<HTMLDivElement | null>(null);
+  const dragOriginRef = useRef(50);
   const switchReqRef = useRef(0);
 
   const active = service.slides[currentSlide]!;
@@ -188,7 +198,7 @@ function PortfolioServiceBlock({ service }: { service: PortfolioService }) {
   );
 
   const computePercent = (clientX: number) => {
-    const el = stageRef.current;
+    const el = dragStageRef.current ?? stageRef.current;
     if (!el) return 50;
     const rect = el.getBoundingClientRect();
     const x = clientX - rect.left;
@@ -197,15 +207,19 @@ function PortfolioServiceBlock({ service }: { service: PortfolioService }) {
 
   const startDrag = useCallback(() => {
     if (isSwitching) return;
+    dragOriginRef.current = sliderPosition;
+    setHasDragged(false);
     setIsDragging(true);
-  }, [isSwitching]);
+  }, [isSwitching, sliderPosition]);
 
   const stopDrag = useCallback(() => {
     setIsDragging(false);
+    dragStageRef.current = null;
   }, []);
 
   const onMouseDown = useCallback(
     (e: React.MouseEvent) => {
+      dragStageRef.current = e.currentTarget.parentElement as HTMLDivElement | null;
       startDrag();
       setSliderPosition(computePercent(e.clientX));
     },
@@ -215,17 +229,24 @@ function PortfolioServiceBlock({ service }: { service: PortfolioService }) {
   const onTouchStart = useCallback(
     (e: React.TouchEvent) => {
       if (isSwitching) return;
+      dragStageRef.current = e.currentTarget.parentElement as HTMLDivElement | null;
+      dragOriginRef.current = sliderPosition;
+      setHasDragged(false);
       setIsDragging(true);
       const x = e.touches[0]?.clientX;
       if (x != null) setSliderPosition(computePercent(x));
     },
-    [isSwitching],
+    [isSwitching, sliderPosition],
   );
 
   useEffect(() => {
     if (!isDragging) return;
 
-    const onMove = (e: MouseEvent) => setSliderPosition(computePercent(e.clientX));
+    const onMove = (e: MouseEvent) => {
+      const next = computePercent(e.clientX);
+      if (Math.abs(next - dragOriginRef.current) > 1.2) setHasDragged(true);
+      setSliderPosition(next);
+    };
     const onUp = () => stopDrag();
 
     window.addEventListener("mousemove", onMove);
@@ -241,7 +262,11 @@ function PortfolioServiceBlock({ service }: { service: PortfolioService }) {
 
     const onMove = (e: TouchEvent) => {
       const x = e.touches[0]?.clientX;
-      if (x != null) setSliderPosition(computePercent(x));
+      if (x != null) {
+        const next = computePercent(x);
+        if (Math.abs(next - dragOriginRef.current) > 1.2) setHasDragged(true);
+        setSliderPosition(next);
+      }
     };
     const onUp = () => stopDrag();
 
@@ -254,6 +279,31 @@ function PortfolioServiceBlock({ service }: { service: PortfolioService }) {
   }, [isDragging, stopDrag]);
 
   const slideCount = service.slides.length;
+
+  const openInspector = useCallback(() => {
+    if (isSwitching || hasDragged) return;
+    setIsInspectorOpen(true);
+  }, [hasDragged, isSwitching]);
+
+  const closeInspector = useCallback(() => {
+    setIsInspectorOpen(false);
+    setIsDragging(false);
+  }, []);
+
+  useEffect(() => {
+    if (!isInspectorOpen) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeInspector();
+    };
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [closeInspector, isInspectorOpen]);
 
   return (
     <article className="portfolio-item">
@@ -318,9 +368,95 @@ function PortfolioServiceBlock({ service }: { service: PortfolioService }) {
           className="portfolio-slider-hit"
           onMouseDown={onMouseDown}
           onTouchStart={onTouchStart}
+          onClick={openInspector}
           aria-label={`${t.portfolio.dragCompare} ${service.title}`}
         />
+
+        <div className="portfolio-open-hint" aria-hidden="true">
+          <Maximize2 size={15} />
+        </div>
       </div>
+
+      {isInspectorOpen && (
+        <div
+          className="portfolio-inspector"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${active.title} enlarged before and after comparison`}
+        >
+          <div className="portfolio-inspector-top">
+            <div>
+              <p>{service.title}</p>
+              <h3>{active.title}</h3>
+            </div>
+            <button
+              type="button"
+              className="portfolio-inspector-close"
+              onClick={closeInspector}
+              aria-label="Close enlarged comparison"
+            >
+              <X size={22} aria-hidden="true" />
+            </button>
+          </div>
+
+          <div
+            className={`portfolio-inspector-stage${isDragging ? " is-dragging" : ""}`}
+          >
+            <div className="portfolio-inspector-label is-before">Before</div>
+            <div className="portfolio-inspector-label is-after">After</div>
+
+            <Image
+              src={active.beforeSrc}
+              alt=""
+              fill
+              sizes="100vw"
+              className="portfolio-stage-img portfolio-stage-img-before"
+              style={{
+                objectFit: "cover",
+                objectPosition: imageAlign.before,
+              }}
+            />
+
+            <div
+              className="portfolio-stage-after"
+              style={{
+                clipPath: `inset(0 0 0 ${sliderPosition}%)`,
+                WebkitClipPath: `inset(0 0 0 ${sliderPosition}%)`,
+              }}
+            >
+              <Image
+                src={active.afterSrc}
+                alt=""
+                fill
+                sizes="100vw"
+                className="portfolio-stage-img portfolio-stage-img-after"
+                style={{
+                  objectFit: "cover",
+                  objectPosition: imageAlign.after,
+                }}
+              />
+            </div>
+
+            <div
+              className="portfolio-slider-handle"
+              style={{ left: `${sliderPosition}%` }}
+              aria-hidden="true"
+            >
+              <div className="portfolio-slider-handle-inner">
+                <ChevronsLeftRight size={16} strokeWidth={2.25} aria-hidden="true" />
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className="portfolio-slider-hit"
+              onMouseDown={onMouseDown}
+              onTouchStart={onTouchStart}
+              aria-label={`${t.portfolio.dragCompare} ${active.title}`}
+            />
+          </div>
+        </div>
+      )}
 
       {slideCount > 1 && (
         <div className="portfolio-image-controls">
