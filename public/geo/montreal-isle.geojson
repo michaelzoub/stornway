@@ -1,0 +1,21 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "name": "Island of Montreal service area" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-73.78, 45.42],
+            [-73.48, 45.42],
+            [-73.48, 45.58],
+            [-73.78, 45.58],
+            [-73.78, 45.42]
+          ]
+        ]
+      }
+    }
+  ]
+}

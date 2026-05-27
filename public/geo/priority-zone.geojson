@@ -1,0 +1,21 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "name": "Local priority zone" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-73.678, 45.438],
+            [-73.545, 45.438],
+            [-73.545, 45.532],
+            [-73.678, 45.532],
+            [-73.678, 45.438]
+          ]
+        ]
+      }
+    }
+  ]
+}
