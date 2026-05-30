@@ -23,6 +23,26 @@ export function loadImageElement(src: string): Promise<HTMLImageElement> {
   });
 }
 
+const imageCache = new Map<string, Promise<HTMLImageElement>>();
+
+export function getCachedImageElement(src: string): Promise<HTMLImageElement> {
+  const existing = imageCache.get(src);
+  if (existing) return existing;
+
+  const pending = loadImageElement(src);
+  imageCache.set(src, pending);
+  pending.catch(() => {
+    imageCache.delete(src);
+  });
+  return pending;
+}
+
+export function preloadImageSources(sources: string[]): void {
+  for (const src of sources) {
+    void getCachedImageElement(src);
+  }
+}
+
 /**
  * When before/after have different aspect ratios, nudge object-position so the
  * same focal point lands near the center of the compare frame.

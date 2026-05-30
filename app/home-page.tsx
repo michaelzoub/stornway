@@ -39,16 +39,18 @@ export function HomePage() {
 
       <section className="hero-intro" id="top">
         <div className="hero-intro-bg" aria-hidden="true">
-          <Image
-            src="/stornwayhero2.png"
-            alt=""
-            fill
-            priority
-            unoptimized
-            sizes="100vw"
-            className="hero-intro-image"
-          />
-          <div className="hero-intro-shade" />
+          <div className="hero-intro-bg-frame">
+            <Image
+              src="/stornwayhero2.png"
+              alt=""
+              fill
+              priority
+              unoptimized
+              sizes="100vw"
+              className="hero-intro-image"
+            />
+            <div className="hero-intro-shade" />
+          </div>
         </div>
         <div className="hero-intro-content">
           <div className="hero">

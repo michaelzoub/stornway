@@ -51,20 +51,20 @@ export const translations: Record<Language, Translations> = {
     services: {
       eyebrow: "What we do",
       title: "Our services",
-      lede: "Complete solutions to refresh every exterior surface on your property — residential and commercial.",
+      lede: "One team for the outside of your property — from the yard to the driveway to the windows.",
       landscaping: {
         title: "Landscaping",
-        text: "Lawns, planting, edging, and seasonal care for homes and commercial sites that need a clean, finished look.",
+        text: "Professional outdoor care and garden design for lawns, beds, and exterior spaces. From cleanups, planting, edging, and mowing to designing simple, polished garden layouts, we help keep your property looking fresh, organized, and well maintained.",
         imageAlt: "Landscaping service",
       },
       pressureWashing: {
         title: "Pressure Washing",
-        text: "Driveways, walkways, patios, siding, and decks refreshed for residential and commercial properties.",
+        text: "Exterior cleaning for surfaces that collect dirt, algae, stains, and weather buildup over time. Ideal for driveways, walkways, patios, decks, siding, and other outdoor areas that need a cleaner, refreshed look.",
         imageAlt: "Pressure washing service",
       },
       windowWashing: {
         title: "Window Washing",
-        text: "Interior and exterior glass cleaned with care for brighter views at home or on the job site.",
+        text: "Interior and exterior window cleaning for homes and small properties. We leave windows clear, sills cleaned, and glass looking brighter, helping the whole space feel cleaner and more polished.",
         imageAlt: "Window washing service",
       },
     },
@@ -193,20 +193,20 @@ export const translations: Record<Language, Translations> = {
     services: {
       eyebrow: "Ce que nous faisons",
       title: "Nos services",
-      lede: "Des solutions complètes pour rafraîchir chaque surface extérieure de votre propriété — résidentielle et commerciale.",
+      lede: "Une équipe pour l'extérieur de votre propriété — du terrain à l'entrée jusqu'aux vitres.",
       landscaping: {
         title: "Aménagement paysager",
-        text: "Pelouses, plantation, bordures et entretien saisonnier pour des propriétés résidentielles et commerciales.",
+        text: "Entretien extérieur professionnel et conception de jardins pour pelouses, plates-bandes et espaces extérieurs. Du nettoyage, de la plantation et des bordures à la tonte, en passant par des aménagements simples et soignés, nous aidons à garder votre propriété fraîche, organisée et bien entretenue.",
         imageAlt: "Service d'aménagement paysager",
       },
       pressureWashing: {
         title: "Lavage à pression",
-        text: "Entrées, trottoirs, patios, revêtements et terrasses rafraîchis pour propriétés résidentielles et commerciales.",
+        text: "Nettoyage extérieur pour les surfaces qui accumulent saleté, algues, taches et résidus au fil du temps. Idéal pour entrées, trottoirs, patios, terrasses, revêtement et autres espaces extérieurs qui méritent un look plus propre et rafraîchi.",
         imageAlt: "Service de lavage à pression",
       },
       windowWashing: {
         title: "Lavage de vitres",
-        text: "Vitres intérieures et extérieures nettoyées avec soin pour des vues plus lumineuses.",
+        text: "Nettoyage de vitres intérieures et extérieures pour maisons et petites propriétés. Nous laissons les fenêtres claires, les rebords propres et le vitrage plus lumineux, pour un espace qui paraît plus propre et soigné.",
         imageAlt: "Service de lavage de vitres",
       },
     },
