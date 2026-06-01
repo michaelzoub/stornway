@@ -77,155 +77,11 @@ const navItems = [
   { label: "Home", href: "/dashboard", icon: Home },
   { label: "Schedule", href: "/dashboard/schedule", icon: CalendarDays },
   { label: "Clients", href: "/dashboard/clients", icon: Users },
-  { label: "Requests", href: "/dashboard/requests", icon: Inbox, count: 5 },
-  { label: "Quotes", href: "/dashboard/quotes", icon: FileText, count: 8 },
-  { label: "Jobs", href: "/dashboard/jobs", icon: Wrench, count: 14 },
-  { label: "Invoices", href: "/dashboard/invoices", icon: ReceiptText, count: 7 },
+  { label: "Requests", href: "/dashboard/requests", icon: Inbox },
+  { label: "Quotes", href: "/dashboard/quotes", icon: FileText },
+  { label: "Jobs", href: "/dashboard/jobs", icon: Wrench },
+  { label: "Invoices", href: "/dashboard/invoices", icon: ReceiptText },
   { label: "Insights", href: "/dashboard/insights", icon: BarChart3 },
-];
-
-const customers = [
-  {
-    name: "Robert Johnson",
-    email: "robert.johnson@example.com",
-    phone: "(514) 555-0184",
-    address: "123 Maple St, Burlington",
-    city: "Burlington",
-    postal: "L7R 2J4",
-    service: "Pressure Washing",
-    lastService: "May 18, 2026",
-    lifetime: 2840,
-    status: "Active",
-    type: "Washing",
-  },
-  {
-    name: "Sarah Williams",
-    email: "sarah.williams@example.com",
-    phone: "(514) 555-0119",
-    address: "456 Oak Ave, Oakville",
-    city: "Oakville",
-    postal: "L6H 1A8",
-    service: "Lawn Care",
-    lastService: "May 27, 2026",
-    lifetime: 4960,
-    status: "Recurring",
-    type: "Landscaping",
-  },
-  {
-    name: "Michael Brown",
-    email: "michael.brown@example.com",
-    phone: "(514) 555-0198",
-    address: "789 Pine Rd, Milton",
-    city: "Milton",
-    postal: "L9T 5B6",
-    service: "Window Cleaning",
-    lastService: "Apr 30, 2026",
-    lifetime: 1680,
-    status: "Active",
-    type: "Washing",
-  },
-  {
-    name: "Emily Davis",
-    email: "emily.davis@example.com",
-    phone: "(514) 555-0126",
-    address: "321 Cedar Ln, Burlington",
-    city: "Burlington",
-    postal: "L7L 3V2",
-    service: "Garden Bed Installation",
-    lastService: "May 6, 2026",
-    lifetime: 3420,
-    status: "Active",
-    type: "Landscaping",
-  },
-  {
-    name: "Cedar Lane Condos",
-    email: "manager@cedarlane.example",
-    phone: "(514) 555-0142",
-    address: "88 Cedar Lane, Westmount",
-    city: "Westmount",
-    postal: "H3Y 2S7",
-    service: "Seasonal Cleanup",
-    lastService: "May 22, 2026",
-    lifetime: 11950,
-    status: "Commercial",
-    type: "Both",
-  },
-  {
-    name: "North Ridge HOA",
-    email: "board@northridge.example",
-    phone: "(514) 555-0130",
-    address: "12 Ridgeview Dr, Montreal",
-    city: "Montreal",
-    postal: "H4A 1C9",
-    service: "Mulch Installation",
-    lastService: "Apr 12, 2026",
-    lifetime: 8750,
-    status: "Follow-up",
-    type: "Landscaping",
-  },
-];
-
-const jobs = [
-  {
-    client: "Robert Johnson",
-    service: "Pressure Wash - Driveway & Patio",
-    address: "123 Maple St, Burlington",
-    date: "Jun 1",
-    time: "9:00 AM - 11:00 AM",
-    crew: "Crew A",
-    status: "Scheduled",
-    revenue: 640,
-  },
-  {
-    client: "Sarah Williams",
-    service: "Landscape Maintenance",
-    address: "456 Oak Ave, Oakville",
-    date: "Jun 1",
-    time: "10:00 AM - 12:00 PM",
-    crew: "Crew B",
-    status: "In Progress",
-    revenue: 520,
-  },
-  {
-    client: "Michael Brown",
-    service: "Exterior Window Cleaning",
-    address: "789 Pine Rd, Milton",
-    date: "Jun 1",
-    time: "1:00 PM - 3:00 PM",
-    crew: "Crew A",
-    status: "Pending",
-    revenue: 380,
-  },
-  {
-    client: "Emily Davis",
-    service: "Garden Bed Installation",
-    address: "321 Cedar Ln, Burlington",
-    date: "Jun 2",
-    time: "9:00 AM - 1:00 PM",
-    crew: "Crew C",
-    status: "Scheduled",
-    revenue: 1250,
-  },
-  {
-    client: "Cedar Lane Condos",
-    service: "Spring Cleanup + Mulch",
-    address: "88 Cedar Lane, Westmount",
-    date: "Jun 3",
-    time: "8:00 AM - 2:00 PM",
-    crew: "Crew B",
-    status: "Scheduled",
-    revenue: 2640,
-  },
-  {
-    client: "North Ridge HOA",
-    service: "Mulch Installation",
-    address: "12 Ridgeview Dr, Montreal",
-    date: "Jun 4",
-    time: "9:00 AM - 3:00 PM",
-    crew: "Crew C",
-    status: "Delayed",
-    revenue: 3180,
-  },
 ];
 
 export type DashboardRequest = {
@@ -237,172 +93,6 @@ export type DashboardRequest = {
   status: string;
   value: number;
 };
-
-const mockRequests: DashboardRequest[] = [
-  { name: "Amelia Roberts", service: "Pressure Washing", address: "44 Willow St", date: "Today", source: "Website", status: "New", value: 680 },
-  { name: "Deck Cleaning Lead", service: "Deck Cleaning", address: "91 Brook Ave", date: "Today", source: "Google", status: "Contacted", value: 420 },
-  { name: "Lucas Martin", service: "Window Cleaning", address: "150 Sherbrooke W", date: "Yesterday", source: "Referral", status: "Quote Sent", value: 760 },
-  { name: "Nadia Chen", service: "Flower Planting", address: "22 Victoria Ave", date: "May 30", source: "Facebook", status: "Won", value: 940 },
-  { name: "Owen Price", service: "Lawn Care", address: "77 Elm Rd", date: "May 29", source: "Direct Call", status: "Lost", value: 280 },
-];
-
-const quotes: Quote[] = [
-  {
-    client: "Claire Mc. Nicho",
-    email: "claire.nicho@example.com",
-    phone: "514-803-1934",
-    address: "4747 Av. Connaught, Notre-Dame-de-Grace, Montreal, QC H4V 1R8",
-    number: "Q-1007",
-    service: "Exterior and interior window cleaning",
-    value: 350,
-    created: "Jun 1, 2026",
-    status: "Draft",
-    lineItems: [
-      {
-        product: "Exterior and interior window cleaning",
-        description:
-          "Cleaning of exterior glass surfaces to remove dirt, dust, water marks, and general buildup. Cleaning of interior glass surfaces for a clear, streak-free finish.",
-        quantity: 1,
-        unitPrice: 350,
-      },
-    ],
-  },
-  {
-    client: "Amelia Roberts",
-    email: "amelia.roberts@example.com",
-    phone: "(514) 555-0168",
-    address: "44 Willow St, Montreal, QC",
-    number: "Q-1047",
-    service: "Pressure Washing",
-    value: 680,
-    created: "Today",
-    status: "Sent",
-    lineItems: [
-      {
-        product: "Pressure washing",
-        description: "Driveway, front walkway, and patio surface wash with post-service rinse.",
-        quantity: 1,
-        unitPrice: 680,
-      },
-    ],
-  },
-  {
-    client: "Lucas Martin",
-    email: "lucas.martin@example.com",
-    phone: "(514) 555-0188",
-    address: "150 Sherbrooke W, Montreal, QC",
-    number: "Q-1046",
-    service: "Window Cleaning",
-    value: 760,
-    created: "Yesterday",
-    status: "Viewed",
-    lineItems: [
-      {
-        product: "Window cleaning",
-        description: "Exterior glass, frames, and sill cleaning for the main residence.",
-        quantity: 1,
-        unitPrice: 760,
-      },
-    ],
-  },
-  {
-    client: "North Ridge HOA",
-    email: "board@northridge.example",
-    phone: "(514) 555-0130",
-    address: "12 Ridgeview Dr, Montreal, QC H4A 1C9",
-    number: "Q-1045",
-    service: "Mulch Installation",
-    value: 3180,
-    created: "May 30",
-    status: "Accepted",
-    lineItems: [
-      {
-        product: "Mulch installation",
-        description: "Supply and install premium mulch across common-area garden beds.",
-        quantity: 1,
-        unitPrice: 3180,
-      },
-    ],
-  },
-  {
-    client: "Cedar Lane Condos",
-    email: "manager@cedarlane.example",
-    phone: "(514) 555-0142",
-    address: "88 Cedar Lane, Westmount, QC H3Y 2S7",
-    number: "Q-1044",
-    service: "Seasonal Cleanup",
-    value: 2640,
-    created: "May 28",
-    status: "Accepted",
-    lineItems: [
-      {
-        product: "Seasonal cleanup",
-        description: "Spring cleanup, debris removal, bed edging, and mulch top-up.",
-        quantity: 1,
-        unitPrice: 2640,
-      },
-    ],
-  },
-  {
-    client: "Olivia Green",
-    email: "olivia.green@example.com",
-    phone: "(514) 555-0171",
-    address: "19 Elm Rd, Montreal, QC",
-    number: "Q-1043",
-    service: "Hedge Trimming",
-    value: 520,
-    created: "May 27",
-    status: "Draft",
-    lineItems: [
-      {
-        product: "Hedge trimming",
-        description: "Trim and shape front hedge line, remove clippings, and inspect growth health.",
-        quantity: 1,
-        unitPrice: 520,
-      },
-    ],
-  },
-];
-
-const acceptedQuotes = quotes.filter((quote) => quote.status === "Accepted");
-const acceptedQuoteForecast = acceptedQuotes.reduce(
-  (total, quote) => total + quote.value,
-  0,
-);
-
-const invoices = [
-  { number: "INV-1042", client: "Jennifer Taylor", due: "Jun 1", amount: 1120, paid: 0, balance: 1120, status: "Pending" },
-  { number: "INV-1039", client: "Cedar Lane Condos", due: "May 24", amount: 2640, paid: 1000, balance: 1640, status: "Overdue" },
-  { number: "INV-1034", client: "Robert Johnson", due: "Jun 6", amount: 640, paid: 220, balance: 420, status: "Pending" },
-  { number: "INV-1031", client: "Sarah Williams", due: "May 29", amount: 520, paid: 520, balance: 0, status: "Paid" },
-  { number: "INV-1028", client: "Michael Brown", due: "May 22", amount: 380, paid: 380, balance: 0, status: "Paid" },
-];
-
-const monthlyRevenue = [
-  { label: "Jan", value: 7200 },
-  { label: "Feb", value: 8400 },
-  { label: "Mar", value: 9800 },
-  { label: "Apr", value: 11800 },
-  { label: "May", value: 14300 },
-  { label: "Jun", value: 12540 },
-];
-
-const serviceRevenue = [
-  { label: "Pressure Washing", value: 22500, tone: "blue" as Tone },
-  { label: "Window Cleaning", value: 17800, tone: "violet" as Tone },
-  { label: "Lawn Care", value: 19800, tone: "emerald" as Tone },
-  { label: "Flower Planting", value: 9200, tone: "amber" as Tone },
-  { label: "Mulch", value: 14800, tone: "orange" as Tone },
-  { label: "Seasonal Cleanup", value: 16400, tone: "stone" as Tone },
-];
-
-const neighborhoodRevenue = [
-  { area: "Westmount", jobs: 28, revenue: 31200 },
-  { area: "Burlington", jobs: 24, revenue: 26800 },
-  { area: "Oakville", jobs: 20, revenue: 22400 },
-  { area: "Milton", jobs: 17, revenue: 15100 },
-  { area: "Montreal", jobs: 32, revenue: 33800 },
-];
 
 function toneClasses(tone: Tone) {
   const tones = {
@@ -469,11 +159,6 @@ function PageShell({
                 >
                   <Icon size={17} aria-hidden="true" />
                   <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                  {item.count ? (
-                    <span className="rounded-none bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">
-                      {item.count}
-                    </span>
-                  ) : null}
                 </a>
               );
             })}
@@ -569,8 +254,8 @@ function LoadingState() {
     <div className="rounded-none border border-stone-200 bg-white p-3 shadow-sm">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-stone-400">Loading state</p>
-          <p className="mt-1 text-sm text-stone-500">Live data refresh preview. Mock data is shown while integrations sync.</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-stone-400">Supabase status</p>
+          <p className="mt-1 text-sm text-stone-500">Dashboard data is loaded from Supabase. Empty areas mean the related table has no rows yet.</p>
         </div>
         <div className="hidden flex-1 gap-2 md:flex">
           <span className="h-2 flex-1 rounded-none bg-stone-100" />
@@ -626,8 +311,16 @@ function Badge({ children, tone }: { children: ReactNode; tone: Tone }) {
   );
 }
 
-function RevenueChart({ data = monthlyRevenue }: { data?: typeof monthlyRevenue }) {
+function RevenueChart({ data = [] }: { data?: { label: string; value: number }[] }) {
   const max = Math.max(...data.map((item) => item.value), 1);
+  if (data.length === 0) {
+    return (
+      <div className="p-4 text-sm text-stone-500">
+        No Supabase rows available for this chart yet.
+      </div>
+    );
+  }
+
   const points = data
     .map((item, index) => `${index * 64 + 18},${130 - (item.value / max) * 100}`)
     .join(" ");
@@ -753,7 +446,7 @@ function HeatMap() {
 
 function MapPreview({
   title = "Today's Route Preview",
-  rows = jobs,
+  rows = [],
 }: {
   title?: string;
   rows?: DashboardJob[];
@@ -797,7 +490,7 @@ function EmptyState({ label }: { label: string }) {
 
 function JobsTable({
   compact = false,
-  rows = jobs,
+  rows = [],
 }: {
   compact?: boolean;
   rows?: DashboardJob[];
@@ -841,7 +534,7 @@ function JobsTable({
   );
 }
 
-function ScheduleWidget({ rows = jobs }: { rows?: DashboardJob[] }) {
+function ScheduleWidget({ rows = [] }: { rows?: DashboardJob[] }) {
   return (
     <div className="space-y-4 p-4">
       {rows.slice(0, 4).map((job, index) => (
@@ -986,8 +679,12 @@ export function ClientsPage({
   liveCustomers?: DashboardCustomer[];
 }) {
   const pageCustomers = liveCustomers;
+  const detailClient = pageCustomers[0];
   const activeClients = pageCustomers.filter((client) =>
     ["Active", "Recurring", "Contacted", "Lead"].includes(client.status),
+  ).length;
+  const returningClients = pageCustomers.filter(
+    (client) => client.lifetime > 0 || client.status === "Recurring",
   ).length;
 
   return (
@@ -997,7 +694,7 @@ export function ClientsPage({
           { label: "Total clients", value: String(pageCustomers.length), detail: "From clients or quote requests", tone: "stone", icon: Users },
           { label: "Active clients", value: String(activeClients), detail: "Active, recurring, or contacted", tone: "emerald", icon: CheckCircle2 },
           { label: "New this month", value: "Live", detail: "Created_at support wired", tone: "blue", icon: Plus },
-          { label: "Returning clients", value: "TBD", detail: "Requires completed jobs per client", tone: "violet", icon: TrendingUp },
+          { label: "Returning clients", value: String(returningClients), detail: "Recurring or lifetime value recorded", tone: "violet", icon: TrendingUp },
         ]}
       />
       <Card title="CRM source of truth" action="Supabase table: clients">
@@ -1059,17 +756,30 @@ export function ClientsPage({
         </Card>
         <Card title="Client Detail Drawer" action="Open full profile">
           <div className="space-y-4 p-4">
-            <div>
-              <p className="text-lg font-semibold text-stone-950">Cedar Lane Condos</p>
-              <p className="text-sm text-stone-500">Commercial account - seasonal cleanup and snow referral partner</p>
-            </div>
-            <div className="grid gap-2 text-sm">
-              <p className="flex items-center gap-2 text-stone-600"><Mail size={15} /> manager@cedarlane.example</p>
-              <p className="flex items-center gap-2 text-stone-600"><Phone size={15} /> (514) 555-0142</p>
-              <p className="flex items-center gap-2 text-stone-600"><MapPin size={15} /> 88 Cedar Lane, Westmount</p>
-            </div>
-            <BarChart data={[{ label: "Service history", value: 9 }, { label: "Quotes", value: 4 }, { label: "Invoices", value: 8 }, { label: "Notes", value: 14 }, { label: "Photos", value: 26 }]} />
-            <p className="rounded-none bg-emerald-50 p-3 text-sm text-emerald-800">Revenue generated: {money.format(11950)}. Next reminder: fall cleanup campaign.</p>
+            {detailClient ? (
+              <>
+                <div>
+                  <p className="text-lg font-semibold text-stone-950">{detailClient.name}</p>
+                  <p className="text-sm text-stone-500">{detailClient.type} account - {detailClient.status}</p>
+                </div>
+                <div className="grid gap-2 text-sm">
+                  {detailClient.email ? (
+                    <p className="flex items-center gap-2 text-stone-600"><Mail size={15} /> {detailClient.email}</p>
+                  ) : null}
+                  {detailClient.phone ? (
+                    <p className="flex items-center gap-2 text-stone-600"><Phone size={15} /> {detailClient.phone}</p>
+                  ) : null}
+                  <p className="flex items-center gap-2 text-stone-600"><MapPin size={15} /> {detailClient.address}</p>
+                </div>
+                <BarChart data={[
+                  { label: "Lifetime value", value: detailClient.lifetime },
+                  { label: "Known status", value: detailClient.status ? 1 : 0 },
+                ]} />
+                <p className="rounded-none bg-emerald-50 p-3 text-sm text-emerald-800">Revenue generated: {money.format(detailClient.lifetime)}.</p>
+              </>
+            ) : (
+              <p className="text-sm text-stone-500">No client rows are available for a detail preview yet.</p>
+            )}
           </div>
         </Card>
       </div>
@@ -1080,14 +790,11 @@ export function ClientsPage({
 
 export function RequestsPage({
   liveRequests = [],
-  useMockFallback = true,
 }: {
   liveRequests?: DashboardRequest[];
-  useMockFallback?: boolean;
 }) {
   const stages = ["New", "Contacted", "Quote Sent", "Won", "Lost"];
-  const allRequests =
-    liveRequests.length > 0 || !useMockFallback ? liveRequests : mockRequests;
+  const allRequests = liveRequests;
   return (
     <PageShell active="Requests" eyebrow="Lead inbox" title="Requests">
       <KpiGrid

@@ -44,5 +44,5 @@ export default async function Page() {
     console.error("[dashboard/requests] Failed to load Supabase requests:", error);
   }
 
-  return <RequestsPage liveRequests={liveRequests} useMockFallback={false} />;
+  return <RequestsPage liveRequests={liveRequests} />;
 }
