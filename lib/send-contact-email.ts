@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { Resend } from "resend";
 import type { ContactServiceId } from "@/lib/contact-services";
 import { CONTACT_EMAIL } from "@/lib/contact-config";
 
@@ -58,31 +59,30 @@ async function sendViaResend(payload: ContactEmailPayload): Promise<boolean> {
   const apiKey = process.env.RESEND_API_KEY?.trim();
   if (!apiKey) return false;
 
+  const resend = new Resend(apiKey);
   const from =
     process.env.CONTACT_FROM_EMAIL?.trim() ??
     "Stornway Group <onboarding@resend.dev>";
 
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
+  try {
+    const { error } = await resend.emails.send({
       from,
       to: [getToEmail()],
-      reply_to: payload.email,
+      replyTo: payload.email,
       subject: buildSubject(payload),
       html: buildHtml(payload),
-    }),
-  });
+    });
 
-  if (!response.ok) {
-    console.error("[contact] Resend failed:", await response.text());
+    if (error) {
+      console.error("[contact] Resend failed:", error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error("[contact] Resend threw:", error);
     return false;
   }
-
-  return true;
 }
 
 async function sendViaSmtp(payload: ContactEmailPayload): Promise<boolean> {
