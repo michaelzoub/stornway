@@ -1,4 +1,6 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { useMemo, useState, type ReactNode } from "react";
 import {
   BadgeDollarSign,
   BarChart3,
@@ -10,6 +12,8 @@ import {
   ClipboardList,
   Clock3,
   CreditCard,
+  Download,
+  Eye,
   FileCheck2,
   FileText,
   Filter,
@@ -26,8 +30,10 @@ import {
   ReceiptText,
   Route,
   Search,
+  Send,
   Settings,
   Sparkles,
+  Smartphone,
   TrendingUp,
   Users,
   WalletCards,
@@ -44,10 +50,37 @@ type Kpi = {
   icon: typeof BadgeDollarSign;
 };
 
+type QuoteLineItem = {
+  product: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+};
+
+type Quote = {
+  client: string;
+  email: string;
+  phone: string;
+  address: string;
+  number: string;
+  service: string;
+  value: number;
+  created: string;
+  status: string;
+  lineItems: QuoteLineItem[];
+};
+
 const money = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
   maximumFractionDigits: 0,
+});
+
+const moneyWithCents = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
 });
 
 const navItems = [
@@ -223,13 +256,129 @@ const mockRequests: DashboardRequest[] = [
   { name: "Owen Price", service: "Lawn Care", address: "77 Elm Rd", date: "May 29", source: "Direct Call", status: "Lost", value: 280 },
 ];
 
-const quotes = [
-  { client: "Amelia Roberts", number: "Q-1047", service: "Pressure Washing", value: 680, created: "Today", status: "Sent" },
-  { client: "Lucas Martin", number: "Q-1046", service: "Window Cleaning", value: 760, created: "Yesterday", status: "Viewed" },
-  { client: "North Ridge HOA", number: "Q-1045", service: "Mulch Installation", value: 3180, created: "May 30", status: "Accepted" },
-  { client: "Cedar Lane Condos", number: "Q-1044", service: "Seasonal Cleanup", value: 2640, created: "May 28", status: "Accepted" },
-  { client: "Olivia Green", number: "Q-1043", service: "Hedge Trimming", value: 520, created: "May 27", status: "Draft" },
+const quotes: Quote[] = [
+  {
+    client: "Claire Mc. Nicho",
+    email: "claire.nicho@example.com",
+    phone: "514-803-1934",
+    address: "4747 Av. Connaught, Notre-Dame-de-Grace, Montreal, QC H4V 1R8",
+    number: "Q-1007",
+    service: "Exterior and interior window cleaning",
+    value: 350,
+    created: "Jun 1, 2026",
+    status: "Draft",
+    lineItems: [
+      {
+        product: "Exterior and interior window cleaning",
+        description:
+          "Cleaning of exterior glass surfaces to remove dirt, dust, water marks, and general buildup. Cleaning of interior glass surfaces for a clear, streak-free finish.",
+        quantity: 1,
+        unitPrice: 350,
+      },
+    ],
+  },
+  {
+    client: "Amelia Roberts",
+    email: "amelia.roberts@example.com",
+    phone: "(514) 555-0168",
+    address: "44 Willow St, Montreal, QC",
+    number: "Q-1047",
+    service: "Pressure Washing",
+    value: 680,
+    created: "Today",
+    status: "Sent",
+    lineItems: [
+      {
+        product: "Pressure washing",
+        description: "Driveway, front walkway, and patio surface wash with post-service rinse.",
+        quantity: 1,
+        unitPrice: 680,
+      },
+    ],
+  },
+  {
+    client: "Lucas Martin",
+    email: "lucas.martin@example.com",
+    phone: "(514) 555-0188",
+    address: "150 Sherbrooke W, Montreal, QC",
+    number: "Q-1046",
+    service: "Window Cleaning",
+    value: 760,
+    created: "Yesterday",
+    status: "Viewed",
+    lineItems: [
+      {
+        product: "Window cleaning",
+        description: "Exterior glass, frames, and sill cleaning for the main residence.",
+        quantity: 1,
+        unitPrice: 760,
+      },
+    ],
+  },
+  {
+    client: "North Ridge HOA",
+    email: "board@northridge.example",
+    phone: "(514) 555-0130",
+    address: "12 Ridgeview Dr, Montreal, QC H4A 1C9",
+    number: "Q-1045",
+    service: "Mulch Installation",
+    value: 3180,
+    created: "May 30",
+    status: "Accepted",
+    lineItems: [
+      {
+        product: "Mulch installation",
+        description: "Supply and install premium mulch across common-area garden beds.",
+        quantity: 1,
+        unitPrice: 3180,
+      },
+    ],
+  },
+  {
+    client: "Cedar Lane Condos",
+    email: "manager@cedarlane.example",
+    phone: "(514) 555-0142",
+    address: "88 Cedar Lane, Westmount, QC H3Y 2S7",
+    number: "Q-1044",
+    service: "Seasonal Cleanup",
+    value: 2640,
+    created: "May 28",
+    status: "Accepted",
+    lineItems: [
+      {
+        product: "Seasonal cleanup",
+        description: "Spring cleanup, debris removal, bed edging, and mulch top-up.",
+        quantity: 1,
+        unitPrice: 2640,
+      },
+    ],
+  },
+  {
+    client: "Olivia Green",
+    email: "olivia.green@example.com",
+    phone: "(514) 555-0171",
+    address: "19 Elm Rd, Montreal, QC",
+    number: "Q-1043",
+    service: "Hedge Trimming",
+    value: 520,
+    created: "May 27",
+    status: "Draft",
+    lineItems: [
+      {
+        product: "Hedge trimming",
+        description: "Trim and shape front hedge line, remove clippings, and inspect growth health.",
+        quantity: 1,
+        unitPrice: 520,
+      },
+    ],
+  },
 ];
+
+const acceptedQuotes = quotes.filter((quote) => quote.status === "Accepted");
+const acceptedQuoteForecast = acceptedQuotes.reduce(
+  (total, quote) => total + quote.value,
+  0,
+);
 
 const invoices = [
   { number: "INV-1042", client: "Jennifer Taylor", due: "Jun 1", amount: 1120, paid: 0, balance: 1120, status: "Pending" },
@@ -758,13 +907,17 @@ export function SchedulePage() {
         <Card title="Scheduled Jobs" action="Dispatch"><JobsTable /></Card>
         <Card title="Filters">
           <div className="grid gap-3 p-4">
-            {["Service Type", "Crew", "Status"].map((filter) => (
-              <label key={filter} className="grid gap-1 text-sm font-semibold text-stone-700">
-                {filter}
+            {[
+              ["Service Type", ["All services", "Pressure washing", "Window cleaning", "Landscape maintenance", "Mulch installation"]],
+              ["Crew", ["All crews", "Crew A", "Crew B", "Crew C"]],
+              ["Status", ["All statuses", "Scheduled", "In Progress", "Pending", "Delayed"]],
+            ].map(([filter, options]) => (
+              <label key={filter as string} className="grid gap-1 text-sm font-semibold text-stone-700">
+                {filter as string}
                 <select className="rounded-none border border-stone-200 bg-white px-3 py-2 text-sm font-normal text-stone-600">
-                  <option>All {filter.toLowerCase()}</option>
-                  <option>Pressure Washing</option>
-                  <option>Landscaping</option>
+                  {(options as string[]).map((option) => (
+                    <option key={option}>{option}</option>
+                  ))}
                 </select>
               </label>
             ))}
@@ -787,6 +940,22 @@ export function ClientsPage() {
           { label: "Returning clients", value: "64%", detail: "Repeat booking rate", tone: "violet", icon: TrendingUp },
         ]}
       />
+      <Card title="CRM source of truth" action="Supabase table: clients">
+        <div className="grid gap-3 p-4 text-sm text-stone-600 md:grid-cols-3">
+          <div className="rounded-none border border-stone-200 bg-stone-50 p-3">
+            <p className="font-semibold text-stone-950">Clients are their own table</p>
+            <p className="mt-1">Do not infer a client only by matching names. Use email/phone plus a `client_id` relationship.</p>
+          </div>
+          <div className="rounded-none border border-stone-200 bg-stone-50 p-3">
+            <p className="font-semibold text-stone-950">Requests become clients</p>
+            <p className="mt-1">A website request can create or attach to a client once Stornway confirms the lead.</p>
+          </div>
+          <div className="rounded-none border border-stone-200 bg-stone-50 p-3">
+            <p className="font-semibold text-stone-950">Jobs, quotes, invoices reference clients</p>
+            <p className="mt-1">That gives one account history instead of duplicate rows for the same person.</p>
+          </div>
+        </div>
+      </Card>
       <Card title="Search + Filters" action="Save view">
         <div className="grid gap-3 p-4 md:grid-cols-4">
           {["Name", "Email", "Phone", "Service type"].map((label) => (
@@ -795,12 +964,12 @@ export function ClientsPage() {
         </div>
       </Card>
       <div className="grid gap-4 xl:grid-cols-[1.5fr_0.9fr]">
-        <Card title="Clients Table" action="Export">
+        <Card title="Clients Table (public.clients)" action="Export">
           <div className="overflow-x-auto">
             <table className="min-w-[980px] w-full text-left text-sm">
               <thead className="text-xs uppercase tracking-[0.08em] text-stone-400">
                 <tr>
-                  {["Name", "Address", "Email", "Phone", "Last service", "Lifetime value", "Status"].map((head) => (
+                  {["Client", "Address", "Email", "Phone", "Last service", "Lifetime value", "Status"].map((head) => (
                     <th key={head} className="px-4 py-3 font-semibold">{head}</th>
                   ))}
                 </tr>
@@ -914,6 +1083,223 @@ export function RequestsPage({
   );
 }
 
+function getQuoteSendHref(quote: Quote, channel: string) {
+  const subject = `Stornway ${quote.number}`;
+  const body = `Hi ${quote.client},\n\nHere is your Stornway estimate for ${quote.service}: ${moneyWithCents.format(quote.value)}.\n\nReply here with any questions or to approve the quote.\n\nStornway Group`;
+
+  if (channel === "Phone") return `tel:${quote.phone}`;
+  if (channel === "SMS") {
+    return `sms:${quote.phone}?&body=${encodeURIComponent(body)}`;
+  }
+
+  return `mailto:${quote.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
+function QuoteDocumentPreview({
+  quote,
+  documentType,
+}: {
+  quote: Quote;
+  documentType: "Quote" | "Invoice";
+}) {
+  const total = quote.lineItems.reduce(
+    (sum, item) => sum + item.quantity * item.unitPrice,
+    0,
+  );
+  const [street, cityLine = "Montreal, QC"] = quote.address.split(/,\s*(?=[^,]+,\s*QC|Montreal|Westmount|Notre-Dame)/);
+  const sentLabel = documentType === "Invoice" ? "Issued on:" : "Sent on:";
+  const totalLabel = documentType === "Invoice" ? "Total Due" : "Total Estimate";
+  const headingNumber =
+    documentType === "Invoice"
+      ? quote.number.replace(/^Q-?/, "INVOICE #")
+      : quote.number.replace(/^Q-?10/, "QUOTE #");
+
+  return (
+    <div className="overflow-x-auto bg-stone-100 p-3">
+      <div className="mx-auto min-h-[860px] w-[760px] bg-white px-10 py-12 text-[#27272a] shadow-sm">
+        <div className="grid grid-cols-[190px_1fr] gap-16">
+          <div className="flex size-28 items-center justify-center bg-[#071b06] p-3">
+            <img src="/stornwaylogo1.svg" alt="Stornway Group" className="w-full" />
+          </div>
+          <div>
+            <h3 className="text-3xl font-extrabold uppercase tracking-normal text-[#2a2a2a]">
+              {headingNumber}
+            </h3>
+            <div className="mt-2 border-t-2 border-[#556052] pt-3">
+              <p className="text-xs font-extrabold uppercase text-[#2a2a2a]">{sentLabel}</p>
+              <p className="mt-4 border-b border-stone-300 pb-2 text-base font-semibold text-stone-500">
+                June 1, 2026
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="my-8 border-t border-stone-300" />
+
+        <div className="grid grid-cols-2 gap-14">
+          <div>
+            <p className="text-xs font-extrabold uppercase text-stone-500">Recipient:</p>
+            <p className="mt-2 text-xl font-extrabold">{quote.client}</p>
+            <p className="mt-2 leading-tight">
+              {street}
+              <br />
+              {cityLine}
+              <br />
+              Phone: {quote.phone}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-extrabold uppercase text-stone-500">Sender:</p>
+            <p className="mt-2 text-xl font-extrabold">Stornway Group</p>
+            <p className="mt-2 leading-tight">
+              Residential and commercial exterior services
+              <br />
+              Phone: 514-758-6241
+              <br />
+              Email: info@stornway.com
+              <br />
+              Website: stornway.com
+            </p>
+          </div>
+        </div>
+
+        <table className="mt-10 w-full table-fixed text-left text-sm">
+          <thead className="bg-[#071b06] text-white">
+            <tr>
+              <th className="w-[22%] px-3 py-2 font-extrabold">Product/Service</th>
+              <th className="w-[36%] border-l border-white/25 px-3 py-2 font-extrabold">Description</th>
+              <th className="w-[15%] border-l border-white/25 px-3 py-2 text-center font-extrabold">Qty.</th>
+              <th className="w-[20%] border-l border-white/25 px-3 py-2 font-extrabold">Unit Price</th>
+              <th className="w-[17%] border-l border-white/25 px-3 py-2 font-extrabold">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {quote.lineItems.map((item) => (
+              <tr key={item.product} className="border-b border-stone-100 align-top">
+                <td className="px-3 py-3 font-medium leading-tight">{item.product}</td>
+                <td className="px-3 py-3 leading-tight">{item.description}</td>
+                <td className="px-3 py-3 text-center">{item.quantity}</td>
+                <td className="px-3 py-3">{moneyWithCents.format(item.unitPrice)}</td>
+                <td className="px-3 py-3 font-semibold">
+                  {moneyWithCents.format(item.quantity * item.unitPrice)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <p className="mt-3 text-sm">* Non-taxable</p>
+
+        <div className="mt-8 flex items-center justify-end gap-4">
+          <p className="text-base font-extrabold">{totalLabel}</p>
+          <p className="min-w-28 border border-stone-300 px-4 py-2 text-right text-base font-semibold">
+            {moneyWithCents.format(total)}
+          </p>
+        </div>
+
+        <p className="mt-[440px] text-base">
+          This quote is valid for the next 30 days, after which values may be subject to change.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function QuoteDeliveryPanel() {
+  const [selectedNumber, setSelectedNumber] = useState(quotes[0]?.number ?? "");
+  const [channel, setChannel] = useState("Email");
+  const [documentType, setDocumentType] = useState<"Quote" | "Invoice">("Quote");
+  const selectedQuote = useMemo(
+    () => quotes.find((quote) => quote.number === selectedNumber) ?? quotes[0]!,
+    [selectedNumber],
+  );
+  const sendHref = getQuoteSendHref(selectedQuote, channel);
+
+  return (
+    <div className="grid gap-4 xl:grid-cols-[0.82fr_1.18fr]">
+      <Card title="Send quote / generate invoice" action="Connected next: quotes table">
+        <div className="space-y-4 p-4">
+          <label className="grid gap-1 text-sm font-semibold text-stone-700">
+            Quote
+            <select
+              value={selectedNumber}
+              onChange={(event) => setSelectedNumber(event.target.value)}
+              className="rounded-none border border-stone-200 bg-white px-3 py-2 text-sm font-normal text-stone-600"
+            >
+              {quotes.map((quote) => (
+                <option key={quote.number} value={quote.number}>
+                  {quote.number} - {quote.client} - {moneyWithCents.format(quote.value)}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="grid gap-1 text-sm font-semibold text-stone-700">
+              Send by
+              <select
+                value={channel}
+                onChange={(event) => setChannel(event.target.value)}
+                className="rounded-none border border-stone-200 bg-white px-3 py-2 text-sm font-normal text-stone-600"
+              >
+                <option>Email</option>
+                <option>SMS</option>
+                <option>Phone</option>
+              </select>
+            </label>
+            <label className="grid gap-1 text-sm font-semibold text-stone-700">
+              Preview
+              <select
+                value={documentType}
+                onChange={(event) => setDocumentType(event.target.value as "Quote" | "Invoice")}
+                className="rounded-none border border-stone-200 bg-white px-3 py-2 text-sm font-normal text-stone-600"
+              >
+                <option>Quote</option>
+                <option>Invoice</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="rounded-none border border-stone-200 bg-stone-50 p-3 text-sm text-stone-600">
+            <p className="font-semibold text-stone-950">{selectedQuote.client}</p>
+            <p className="mt-1">{selectedQuote.email}</p>
+            <p>{selectedQuote.phone}</p>
+            <p className="mt-2">{selectedQuote.service}</p>
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-3">
+            <a
+              href={sendHref}
+              className="inline-flex items-center justify-center gap-2 rounded-none bg-emerald-800 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-900"
+            >
+              {channel === "SMS" ? <Smartphone size={16} aria-hidden="true" /> : <Send size={16} aria-hidden="true" />}
+              Send
+            </a>
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="inline-flex items-center justify-center gap-2 rounded-none border border-stone-200 bg-white px-3 py-2 text-sm font-semibold text-stone-800 hover:bg-stone-100"
+            >
+              <Download size={16} aria-hidden="true" />
+              Print/PDF
+            </button>
+            <button
+              type="button"
+              className="inline-flex items-center justify-center gap-2 rounded-none border border-stone-200 bg-white px-3 py-2 text-sm font-semibold text-stone-800 hover:bg-stone-100"
+            >
+              <Eye size={16} aria-hidden="true" />
+              Preview
+            </button>
+          </div>
+        </div>
+      </Card>
+      <Card title={`${documentType} preview`}>
+        <QuoteDocumentPreview quote={selectedQuote} documentType={documentType} />
+      </Card>
+    </div>
+  );
+}
+
 export function QuotesPage() {
   return (
     <PageShell active="Quotes" eyebrow="Sales pipeline" title="Quotes">
@@ -921,19 +1307,20 @@ export function QuotesPage() {
         items={[
           { label: "Draft quotes", value: "19", detail: "$9,450 draft value", tone: "amber", icon: ClipboardList },
           { label: "Sent quotes", value: "8", detail: "$4,260 active", tone: "blue", icon: FileText },
-          { label: "Accepted quotes", value: "3", detail: "$6,470 to schedule", tone: "emerald", icon: FileCheck2 },
+          { label: "Accepted quotes", value: String(acceptedQuotes.length), detail: `${money.format(acceptedQuoteForecast)} to schedule`, tone: "emerald", icon: FileCheck2 },
           { label: "Conversion rate", value: "33%", detail: "+4 points this month", tone: "violet", icon: TrendingUp },
         ]}
       />
+      <QuoteDeliveryPanel />
       <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
         <Card title="Quote Funnel"><Funnel steps={[{ label: "Requests", value: 42 }, { label: "Quotes Sent", value: 28 }, { label: "Viewed", value: 19 }, { label: "Accepted", value: 9 }]} /></Card>
-        <Card title="Revenue Forecast"><RevenueChart data={[{ label: "W1", value: 4100 }, { label: "W2", value: 6800 }, { label: "W3", value: 5400 }, { label: "W4", value: 9200 }, { label: "W5", value: 7200 }, { label: "W6", value: 10400 }]} /></Card>
+        <Card title="Revenue Forecast"><RevenueChart data={[{ label: "W1", value: 4100 }, { label: "W2", value: acceptedQuoteForecast }, { label: "W3", value: 5400 }, { label: "W4", value: 9200 }, { label: "W5", value: 7200 }, { label: "W6", value: 10400 }]} /></Card>
       </div>
       <Card title="Quotes Table" action="Create quote">
         <div className="overflow-x-auto">
           <table className="min-w-[820px] w-full text-left text-sm">
             <thead className="text-xs uppercase tracking-[0.08em] text-stone-400">
-              <tr>{["Client", "Quote #", "Service", "Value", "Created", "Status"].map((head) => <th key={head} className="px-4 py-3 font-semibold">{head}</th>)}</tr>
+              <tr>{["Client", "Quote #", "Service", "Value", "Created", "Status", "Send"].map((head) => <th key={head} className="px-4 py-3 font-semibold">{head}</th>)}</tr>
             </thead>
             <tbody className="divide-y divide-stone-100">
               {quotes.map((quote) => (
@@ -944,6 +1331,15 @@ export function QuotesPage() {
                   <td className="px-4 py-3 font-semibold">{money.format(quote.value)}</td>
                   <td className="px-4 py-3 text-stone-600">{quote.created}</td>
                   <td className="px-4 py-3"><Badge tone={statusTone(quote.status)}>{quote.status}</Badge></td>
+                  <td className="px-4 py-3">
+                    <a
+                      href={getQuoteSendHref(quote, "Email")}
+                      className="inline-flex items-center gap-2 rounded-none border border-stone-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-stone-800 hover:bg-stone-100"
+                    >
+                      <Mail size={14} aria-hidden="true" />
+                      Email
+                    </a>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -1060,9 +1456,29 @@ export function InsightsPage() {
           { label: "Repeat customer rate", value: "64%", detail: "+8 points year over year", tone: "emerald", icon: Users },
           { label: "Average customer value", value: "$1,420", detail: "Across active clients", tone: "blue", icon: BadgeDollarSign },
           { label: "Customer lifetime value", value: "$4,860", detail: "Top quartile accounts", tone: "violet", icon: TrendingUp },
-          { label: "Forecast next month", value: "$16,800", detail: "Accepted + recurring", tone: "emerald", icon: BarChart3 },
+          { label: "Forecast next month", value: money.format(acceptedQuoteForecast + 7200 + 3130), detail: "Accepted + recurring", tone: "emerald", icon: BarChart3 },
         ]}
       />
+      <Card title="Forecast source of truth" action="Supabase tables: quotes + jobs + invoices">
+        <div className="grid gap-3 p-4 text-sm text-stone-600 lg:grid-cols-4">
+          <div className="rounded-none border border-stone-200 bg-stone-50 p-3">
+            <p className="font-semibold text-stone-950">Accepted quotes</p>
+            <p className="mt-1">{money.format(acceptedQuoteForecast)} from quotes with status `accepted`.</p>
+          </div>
+          <div className="rounded-none border border-stone-200 bg-stone-50 p-3">
+            <p className="font-semibold text-stone-950">Scheduled jobs</p>
+            <p className="mt-1">Jobs forecast operational capacity and expected completion dates.</p>
+          </div>
+          <div className="rounded-none border border-stone-200 bg-stone-50 p-3">
+            <p className="font-semibold text-stone-950">Invoices</p>
+            <p className="mt-1">Invoices become actual revenue once issued and paid.</p>
+          </div>
+          <div className="rounded-none border border-stone-200 bg-stone-50 p-3">
+            <p className="font-semibold text-stone-950">Manual adjustments</p>
+            <p className="mt-1">Only use for seasonality or known recurring work that has no quote yet.</p>
+          </div>
+        </div>
+      </Card>
       <div className="grid gap-4 xl:grid-cols-3">
         <Card title="Monthly Revenue"><RevenueChart /></Card>
         <Card title="Revenue by Service"><BarChart data={serviceRevenue} /></Card>
@@ -1090,7 +1506,7 @@ export function InsightsPage() {
         <Card title="Revenue Forecast">
           <div className="space-y-3 p-4">
             {[
-              ["Accepted quotes", 6470],
+              ["Accepted quotes", acceptedQuoteForecast],
               ["Recurring customers", 7200],
               ["Historical lift", 3130],
             ].map(([label, value]) => (
