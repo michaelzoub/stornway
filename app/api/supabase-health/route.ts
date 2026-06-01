@@ -39,6 +39,10 @@ export async function GET() {
     restStatus: null as number | null,
     restOk: false,
     restMessage: "",
+    tables: {} as Record<
+      string,
+      { status: number | null; ok: boolean; message: string }
+    >,
   };
 
   if (!config.url || !config.serviceKey) {
@@ -46,6 +50,48 @@ export async function GET() {
   }
 
   try {
+    const tableNames = [
+      config.table,
+      "clients",
+      "jobs",
+      "quotes",
+      "quote_line_items",
+      "invoices",
+      "invoice_line_items",
+    ];
+
+    const results = await Promise.all(
+      tableNames.map(async (table) => {
+        const response = await fetch(
+          `${config.url}/rest/v1/${encodeURIComponent(table)}?select=id&limit=1`,
+          {
+            headers: {
+              apikey: config.serviceKey,
+              Authorization: `Bearer ${config.serviceKey}`,
+            },
+            cache: "no-store",
+          },
+        );
+
+        return {
+          table,
+          status: response.status,
+          ok: response.ok,
+          message: response.ok
+            ? "Reachable."
+            : (await response.text()).slice(0, 300),
+        };
+      }),
+    );
+
+    for (const result of results) {
+      status.tables[result.table] = {
+        status: result.status,
+        ok: result.ok,
+        message: result.message,
+      };
+    }
+
     const response = await fetch(
       `${config.url}/rest/v1/${encodeURIComponent(config.table)}?select=id&limit=1`,
       {

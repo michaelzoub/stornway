@@ -1,5 +1,9 @@
 import { ClientsPage } from "@/components/ops-dashboard";
+import { getDashboardCustomers } from "@/lib/dashboard-data";
 
-export default function Page() {
-  return <ClientsPage />;
+export const dynamic = "force-dynamic";
+
+export default async function Page() {
+  const liveCustomers = await getDashboardCustomers();
+  return <ClientsPage liveCustomers={liveCustomers} />;
 }

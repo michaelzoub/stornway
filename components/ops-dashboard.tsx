@@ -1,6 +1,13 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
+import type {
+  DashboardCustomer,
+  DashboardInvoice,
+  DashboardJob,
+  DashboardQuote,
+  DashboardQuoteLineItem,
+} from "@/lib/dashboard-data";
 import {
   BadgeDollarSign,
   BarChart3,
@@ -50,25 +57,8 @@ type Kpi = {
   icon: typeof BadgeDollarSign;
 };
 
-type QuoteLineItem = {
-  product: string;
-  description: string;
-  quantity: number;
-  unitPrice: number;
-};
-
-type Quote = {
-  client: string;
-  email: string;
-  phone: string;
-  address: string;
-  number: string;
-  service: string;
-  value: number;
-  created: string;
-  status: string;
-  lineItems: QuoteLineItem[];
-};
+type QuoteLineItem = DashboardQuoteLineItem;
+type Quote = DashboardQuote;
 
 const money = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -637,7 +627,7 @@ function Badge({ children, tone }: { children: ReactNode; tone: Tone }) {
 }
 
 function RevenueChart({ data = monthlyRevenue }: { data?: typeof monthlyRevenue }) {
-  const max = Math.max(...data.map((item) => item.value));
+  const max = Math.max(...data.map((item) => item.value), 1);
   const points = data
     .map((item, index) => `${index * 64 + 18},${130 - (item.value / max) * 100}`)
     .join(" ");
@@ -660,7 +650,15 @@ function RevenueChart({ data = monthlyRevenue }: { data?: typeof monthlyRevenue 
 }
 
 function BarChart({ data }: { data: { label: string; value: number; tone?: Tone }[] }) {
-  const max = Math.max(...data.map((item) => item.value));
+  const max = Math.max(...data.map((item) => item.value), 1);
+  if (data.length === 0) {
+    return (
+      <div className="p-4 text-sm text-stone-500">
+        No Supabase rows available for this chart yet.
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3 p-4">
       {data.map((item) => (
@@ -714,7 +712,7 @@ function PieChart({
 }
 
 function Funnel({ steps }: { steps: { label: string; value: number }[] }) {
-  const first = steps[0]?.value ?? 1;
+  const first = Math.max(steps[0]?.value ?? 0, 1);
   return (
     <div className="grid gap-3 p-4 sm:grid-cols-4">
       {steps.map((step, index) => (
@@ -753,13 +751,21 @@ function HeatMap() {
   );
 }
 
-function MapPreview({ title = "Today's Route Preview" }: { title?: string }) {
+function MapPreview({
+  title = "Today's Route Preview",
+  rows = jobs,
+}: {
+  title?: string;
+  rows?: DashboardJob[];
+}) {
+  const routeJobs = rows;
+
   return (
     <div className="p-4">
       <div className="relative h-64 overflow-hidden rounded-none border border-stone-200 bg-[linear-gradient(135deg,#eef2ff,#ecfdf5_45%,#e0f2fe)]">
         <div className="absolute inset-x-0 top-1/2 h-3 -rotate-6 bg-white/70" />
         <div className="absolute left-1/4 top-0 h-full w-3 rotate-12 bg-white/70" />
-        {jobs.slice(0, 5).map((job, index) => (
+        {routeJobs.slice(0, 5).map((job, index) => (
           <div
             key={job.client}
             className="absolute flex size-9 items-center justify-center rounded-none bg-emerald-800 text-xs font-semibold text-white shadow-lg"
@@ -771,7 +777,9 @@ function MapPreview({ title = "Today's Route Preview" }: { title?: string }) {
         ))}
         <div className="absolute bottom-3 left-3 rounded-none bg-white/90 px-3 py-2 shadow-sm">
           <p className="text-sm font-semibold text-stone-950">{title}</p>
-          <p className="text-xs text-stone-500">5 stops, 42 min drive, {money.format(5430)} scheduled</p>
+          <p className="text-xs text-stone-500">
+            {routeJobs.length} stops, route to optimize, {money.format(routeJobs.reduce((sum, job) => sum + job.revenue, 0))} scheduled
+          </p>
         </div>
       </div>
     </div>
@@ -787,7 +795,15 @@ function EmptyState({ label }: { label: string }) {
   );
 }
 
-function JobsTable({ compact = false }: { compact?: boolean }) {
+function JobsTable({
+  compact = false,
+  rows = jobs,
+}: {
+  compact?: boolean;
+  rows?: DashboardJob[];
+}) {
+  const visibleJobs = rows.slice(0, compact ? 4 : rows.length);
+
   return (
     <div className="overflow-x-auto">
       <table className="min-w-[900px] w-full text-left text-sm">
@@ -802,7 +818,7 @@ function JobsTable({ compact = false }: { compact?: boolean }) {
           </tr>
         </thead>
         <tbody className="divide-y divide-stone-100">
-          {jobs.slice(0, compact ? 4 : jobs.length).map((job) => (
+          {visibleJobs.map((job) => (
             <tr key={`${job.client}-${job.service}`}>
               <td className="px-4 py-3 font-semibold text-stone-950">{job.client}</td>
               <td className="px-4 py-3 text-stone-600">{job.service}</td>
@@ -812,16 +828,23 @@ function JobsTable({ compact = false }: { compact?: boolean }) {
               <td className="px-4 py-3 text-right font-semibold text-stone-950">{money.format(job.revenue)}</td>
             </tr>
           ))}
+          {visibleJobs.length === 0 ? (
+            <tr>
+              <td className="px-4 py-5 text-sm text-stone-500" colSpan={6}>
+                No jobs found in Supabase yet.
+              </td>
+            </tr>
+          ) : null}
         </tbody>
       </table>
     </div>
   );
 }
 
-function ScheduleWidget() {
+function ScheduleWidget({ rows = jobs }: { rows?: DashboardJob[] }) {
   return (
     <div className="space-y-4 p-4">
-      {jobs.slice(0, 4).map((job, index) => (
+      {rows.slice(0, 4).map((job, index) => (
         <div key={`schedule-${job.client}`} className="flex gap-3">
           <div className="w-20 text-sm text-stone-500">{job.time.split(" - ")[0]}</div>
           <div className="relative flex-1 border-l border-stone-200 pl-4">
@@ -831,27 +854,52 @@ function ScheduleWidget() {
           </div>
         </div>
       ))}
+      {rows.length === 0 ? (
+        <p className="text-sm text-stone-500">No scheduled jobs found in Supabase yet.</p>
+      ) : null}
     </div>
   );
 }
 
-export function HomeDashboardPage() {
+export function HomeDashboardPage({
+  liveCustomers = [],
+  liveJobs = [],
+  liveQuotes = [],
+  liveInvoices = [],
+}: {
+  liveCustomers?: DashboardCustomer[];
+  liveJobs?: DashboardJob[];
+  liveQuotes?: DashboardQuote[];
+  liveInvoices?: DashboardInvoice[];
+}) {
+  const dashboardCustomers = liveCustomers;
+  const dashboardJobs = liveJobs;
+  const dashboardQuotes = liveQuotes;
+  const dashboardInvoices = liveInvoices;
+  const openInvoiceBalance = dashboardInvoices.reduce(
+    (sum, invoice) => sum + invoice.balance,
+    0,
+  );
+  const acceptedQuoteTotal = dashboardQuotes
+    .filter((quote) => quote.status === "Accepted")
+    .reduce((sum, quote) => sum + quote.value, 0);
+
   return (
     <PageShell active="Home" eyebrow="Stornway dashboard" title="Good afternoon, Stornway">
       <KpiGrid
         items={[
-          { label: "Revenue this month", value: "$12,540", detail: "+23% vs last 30 days", tone: "emerald", icon: BadgeDollarSign },
-          { label: "Upcoming jobs", value: "14", detail: "Next 7 days", tone: "blue", icon: CalendarDays },
-          { label: "Quotes awaiting response", value: "8", detail: "$4,260 pipeline", tone: "violet", icon: FileText },
-          { label: "Outstanding invoices", value: "$3,180", detail: "7 invoices open", tone: "orange", icon: WalletCards },
-          { label: "New requests this week", value: "5", detail: "3 from Google", tone: "stone", icon: Inbox },
-          { label: "Conversion rate", value: "33%", detail: "Requests to paid jobs", tone: "emerald", icon: TrendingUp },
+          { label: "Revenue this month", value: money.format(dashboardJobs.reduce((sum, job) => sum + job.revenue, 0)), detail: "From Supabase jobs", tone: "emerald", icon: BadgeDollarSign },
+          { label: "Upcoming jobs", value: String(dashboardJobs.length), detail: "Supabase jobs table", tone: "blue", icon: CalendarDays },
+          { label: "Quotes awaiting response", value: String(dashboardQuotes.filter((quote) => ["Sent", "Viewed"].includes(quote.status)).length), detail: `${money.format(acceptedQuoteTotal)} accepted`, tone: "violet", icon: FileText },
+          { label: "Outstanding invoices", value: money.format(openInvoiceBalance), detail: `${dashboardInvoices.length} invoices in Supabase`, tone: "orange", icon: WalletCards },
+          { label: "Known clients", value: String(dashboardCustomers.length), detail: "Clients or derived leads", tone: "stone", icon: Inbox },
+          { label: "Conversion rate", value: dashboardQuotes.length ? `${Math.round((dashboardQuotes.filter((quote) => quote.status === "Accepted").length / dashboardQuotes.length) * 100)}%` : "0%", detail: "Accepted quotes / quotes", tone: "emerald", icon: TrendingUp },
         ]}
       />
       <div className="grid gap-4 xl:grid-cols-[1.45fr_0.85fr]">
-        <Card title="Upcoming Jobs" action="View all"><JobsTable /></Card>
+        <Card title="Upcoming Jobs" action="View all"><JobsTable rows={dashboardJobs} /></Card>
         <div className="space-y-4">
-          <Card title="Today's Schedule" action="Open schedule"><ScheduleWidget /></Card>
+          <Card title="Today's Schedule" action="Open schedule"><ScheduleWidget rows={dashboardJobs} /></Card>
           <Card title="Quick Actions">
             <div className="grid gap-2 p-4 sm:grid-cols-2">
               {["Create quote", "Create invoice", "Schedule job", "Add client"].map((action) => (
@@ -873,15 +921,18 @@ export function HomeDashboardPage() {
   );
 }
 
-export function SchedulePage() {
+export function SchedulePage({ liveJobs = [] }: { liveJobs?: DashboardJob[] }) {
+  const pageJobs = liveJobs;
+  const revenue = pageJobs.reduce((sum, job) => sum + job.revenue, 0);
+
   return (
     <PageShell active="Schedule" eyebrow="Daily operations" title="Schedule">
       <KpiGrid
         items={[
-          { label: "Jobs today", value: "6", detail: "4 confirmed, 2 pending", tone: "blue", icon: CalendarDays },
-          { label: "Revenue today", value: "$5,430", detail: "Booked route value", tone: "emerald", icon: CircleDollarSign },
-          { label: "Hours booked", value: "31.5", detail: "Across 3 crews", tone: "violet", icon: Clock3 },
-          { label: "Open time slots", value: "4", detail: "Best fit after 3 PM", tone: "amber", icon: Gauge },
+          { label: "Jobs", value: String(pageJobs.length), detail: "From Supabase jobs", tone: "blue", icon: CalendarDays },
+          { label: "Revenue scheduled", value: money.format(revenue), detail: "Booked route value", tone: "emerald", icon: CircleDollarSign },
+          { label: "Unassigned crew", value: String(pageJobs.filter((job) => job.crew === "Unassigned").length), detail: "Needs dispatch", tone: "violet", icon: Clock3 },
+          { label: "Open time slots", value: "Manual", detail: "Crew availability not stored yet", tone: "amber", icon: Gauge },
         ]}
       />
       <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
@@ -890,7 +941,7 @@ export function SchedulePage() {
             {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day, index) => (
               <div key={day} className="min-h-36 rounded-none border border-stone-200 bg-stone-50 p-3">
                 <p className="text-xs font-semibold uppercase text-stone-400">{day}</p>
-                {jobs.filter((_, jobIndex) => jobIndex % 7 === index || (index === 0 && jobIndex < 3)).slice(0, 2).map((job) => (
+                {pageJobs.filter((_, jobIndex) => jobIndex % 7 === index || (index === 0 && jobIndex < 3)).slice(0, 2).map((job) => (
                   <div key={`${day}-${job.client}`} className="mt-3 rounded-none bg-white p-2 shadow-sm">
                     <p className="text-xs font-semibold text-stone-950">{job.client}</p>
                     <p className="truncate text-xs text-stone-500">{job.service}</p>
@@ -901,10 +952,10 @@ export function SchedulePage() {
             ))}
           </div>
         </Card>
-        <Card title="Route Preview"><MapPreview /></Card>
+        <Card title="Route Preview"><MapPreview rows={pageJobs} /></Card>
       </div>
       <div className="grid gap-4 xl:grid-cols-[1.5fr_0.8fr]">
-        <Card title="Scheduled Jobs" action="Dispatch"><JobsTable /></Card>
+        <Card title="Scheduled Jobs" action="Dispatch"><JobsTable rows={pageJobs} /></Card>
         <Card title="Filters">
           <div className="grid gap-3 p-4">
             {[
@@ -929,15 +980,24 @@ export function SchedulePage() {
   );
 }
 
-export function ClientsPage() {
+export function ClientsPage({
+  liveCustomers = [],
+}: {
+  liveCustomers?: DashboardCustomer[];
+}) {
+  const pageCustomers = liveCustomers;
+  const activeClients = pageCustomers.filter((client) =>
+    ["Active", "Recurring", "Contacted", "Lead"].includes(client.status),
+  ).length;
+
   return (
     <PageShell active="Clients" eyebrow="CRM" title="Clients">
       <KpiGrid
         items={[
-          { label: "Total clients", value: "486", detail: "Residential and commercial", tone: "stone", icon: Users },
-          { label: "Active clients", value: "214", detail: "Serviced in last year", tone: "emerald", icon: CheckCircle2 },
-          { label: "New this month", value: "31", detail: "+12% month over month", tone: "blue", icon: Plus },
-          { label: "Returning clients", value: "64%", detail: "Repeat booking rate", tone: "violet", icon: TrendingUp },
+          { label: "Total clients", value: String(pageCustomers.length), detail: "From clients or quote requests", tone: "stone", icon: Users },
+          { label: "Active clients", value: String(activeClients), detail: "Active, recurring, or contacted", tone: "emerald", icon: CheckCircle2 },
+          { label: "New this month", value: "Live", detail: "Created_at support wired", tone: "blue", icon: Plus },
+          { label: "Returning clients", value: "TBD", detail: "Requires completed jobs per client", tone: "violet", icon: TrendingUp },
         ]}
       />
       <Card title="CRM source of truth" action="Supabase table: clients">
@@ -975,8 +1035,8 @@ export function ClientsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
-                {customers.map((client) => (
-                  <tr key={client.email}>
+                {pageCustomers.map((client) => (
+                  <tr key={`${client.email}-${client.phone}-${client.name}`}>
                     <td className="px-4 py-3 font-semibold text-stone-950">{client.name}</td>
                     <td className="px-4 py-3 text-stone-600">{client.address}</td>
                     <td className="px-4 py-3 text-stone-600">{client.email}</td>
@@ -986,6 +1046,13 @@ export function ClientsPage() {
                     <td className="px-4 py-3"><Badge tone={statusTone(client.status)}>{client.status}</Badge></td>
                   </tr>
                 ))}
+                {pageCustomers.length === 0 ? (
+                  <tr>
+                    <td className="px-4 py-5 text-sm text-stone-500" colSpan={7}>
+                      No clients found in Supabase yet. Website quote requests will still appear under Requests.
+                    </td>
+                  </tr>
+                ) : null}
               </tbody>
             </table>
           </div>
@@ -1013,11 +1080,14 @@ export function ClientsPage() {
 
 export function RequestsPage({
   liveRequests = [],
+  useMockFallback = true,
 }: {
   liveRequests?: DashboardRequest[];
+  useMockFallback?: boolean;
 }) {
   const stages = ["New", "Contacted", "Quote Sent", "Won", "Lost"];
-  const allRequests = [...liveRequests, ...mockRequests];
+  const allRequests =
+    liveRequests.length > 0 || !useMockFallback ? liveRequests : mockRequests;
   return (
     <PageShell active="Requests" eyebrow="Lead inbox" title="Requests">
       <KpiGrid
@@ -1205,14 +1275,23 @@ function QuoteDocumentPreview({
   );
 }
 
-function QuoteDeliveryPanel() {
-  const [selectedNumber, setSelectedNumber] = useState(quotes[0]?.number ?? "");
+function QuoteDeliveryPanel({ rows }: { rows: DashboardQuote[] }) {
+  const [selectedNumber, setSelectedNumber] = useState(rows[0]?.number ?? "");
   const [channel, setChannel] = useState("Email");
   const [documentType, setDocumentType] = useState<"Quote" | "Invoice">("Quote");
   const selectedQuote = useMemo(
-    () => quotes.find((quote) => quote.number === selectedNumber) ?? quotes[0]!,
-    [selectedNumber],
+    () => rows.find((quote) => quote.number === selectedNumber) ?? rows[0],
+    [rows, selectedNumber],
   );
+  if (!selectedQuote) {
+    return (
+      <Card title="Send quote / generate invoice" action="Supabase table: quotes">
+        <div className="p-4 text-sm text-stone-500">
+          No quotes found in Supabase yet. Create an accepted quote record to preview and send documents here.
+        </div>
+      </Card>
+    );
+  }
   const sendHref = getQuoteSendHref(selectedQuote, channel);
 
   return (
@@ -1226,7 +1305,7 @@ function QuoteDeliveryPanel() {
               onChange={(event) => setSelectedNumber(event.target.value)}
               className="rounded-none border border-stone-200 bg-white px-3 py-2 text-sm font-normal text-stone-600"
             >
-              {quotes.map((quote) => (
+              {rows.map((quote) => (
                 <option key={quote.number} value={quote.number}>
                   {quote.number} - {quote.client} - {moneyWithCents.format(quote.value)}
                 </option>
@@ -1300,21 +1379,28 @@ function QuoteDeliveryPanel() {
   );
 }
 
-export function QuotesPage() {
+export function QuotesPage({ liveQuotes = [] }: { liveQuotes?: DashboardQuote[] }) {
+  const pageQuotes = liveQuotes;
+  const pageAcceptedQuotes = pageQuotes.filter((quote) => quote.status === "Accepted");
+  const pageAcceptedForecast = pageAcceptedQuotes.reduce(
+    (total, quote) => total + quote.value,
+    0,
+  );
+
   return (
     <PageShell active="Quotes" eyebrow="Sales pipeline" title="Quotes">
       <KpiGrid
         items={[
-          { label: "Draft quotes", value: "19", detail: "$9,450 draft value", tone: "amber", icon: ClipboardList },
-          { label: "Sent quotes", value: "8", detail: "$4,260 active", tone: "blue", icon: FileText },
-          { label: "Accepted quotes", value: String(acceptedQuotes.length), detail: `${money.format(acceptedQuoteForecast)} to schedule`, tone: "emerald", icon: FileCheck2 },
-          { label: "Conversion rate", value: "33%", detail: "+4 points this month", tone: "violet", icon: TrendingUp },
+          { label: "Draft quotes", value: String(pageQuotes.filter((quote) => quote.status === "Draft").length), detail: "Supabase quotes", tone: "amber", icon: ClipboardList },
+          { label: "Sent quotes", value: String(pageQuotes.filter((quote) => ["Sent", "Viewed"].includes(quote.status)).length), detail: "Awaiting response", tone: "blue", icon: FileText },
+          { label: "Accepted quotes", value: String(pageAcceptedQuotes.length), detail: `${money.format(pageAcceptedForecast)} to schedule`, tone: "emerald", icon: FileCheck2 },
+          { label: "Conversion rate", value: pageQuotes.length ? `${Math.round((pageAcceptedQuotes.length / pageQuotes.length) * 100)}%` : "0%", detail: "Accepted / total quotes", tone: "violet", icon: TrendingUp },
         ]}
       />
-      <QuoteDeliveryPanel />
+      <QuoteDeliveryPanel rows={pageQuotes} />
       <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
-        <Card title="Quote Funnel"><Funnel steps={[{ label: "Requests", value: 42 }, { label: "Quotes Sent", value: 28 }, { label: "Viewed", value: 19 }, { label: "Accepted", value: 9 }]} /></Card>
-        <Card title="Revenue Forecast"><RevenueChart data={[{ label: "W1", value: 4100 }, { label: "W2", value: acceptedQuoteForecast }, { label: "W3", value: 5400 }, { label: "W4", value: 9200 }, { label: "W5", value: 7200 }, { label: "W6", value: 10400 }]} /></Card>
+        <Card title="Quote Funnel"><Funnel steps={[{ label: "Quotes", value: pageQuotes.length }, { label: "Sent", value: pageQuotes.filter((quote) => ["Sent", "Viewed", "Accepted"].includes(quote.status)).length }, { label: "Viewed", value: pageQuotes.filter((quote) => quote.status === "Viewed").length }, { label: "Accepted", value: pageAcceptedQuotes.length }]} /></Card>
+        <Card title="Revenue Forecast"><RevenueChart data={[{ label: "Draft", value: pageQuotes.filter((quote) => quote.status === "Draft").reduce((sum, quote) => sum + quote.value, 0) }, { label: "Sent", value: pageQuotes.filter((quote) => quote.status === "Sent").reduce((sum, quote) => sum + quote.value, 0) }, { label: "Viewed", value: pageQuotes.filter((quote) => quote.status === "Viewed").reduce((sum, quote) => sum + quote.value, 0) }, { label: "Accepted", value: pageAcceptedForecast }]} /></Card>
       </div>
       <Card title="Quotes Table" action="Create quote">
         <div className="overflow-x-auto">
@@ -1323,7 +1409,7 @@ export function QuotesPage() {
               <tr>{["Client", "Quote #", "Service", "Value", "Created", "Status", "Send"].map((head) => <th key={head} className="px-4 py-3 font-semibold">{head}</th>)}</tr>
             </thead>
             <tbody className="divide-y divide-stone-100">
-              {quotes.map((quote) => (
+              {pageQuotes.map((quote) => (
                 <tr key={quote.number}>
                   <td className="px-4 py-3 font-semibold">{quote.client}</td>
                   <td className="px-4 py-3 text-stone-600">{quote.number}</td>
@@ -1342,6 +1428,13 @@ export function QuotesPage() {
                   </td>
                 </tr>
               ))}
+              {pageQuotes.length === 0 ? (
+                <tr>
+                  <td className="px-4 py-5 text-sm text-stone-500" colSpan={7}>
+                    No quotes found in Supabase yet.
+                  </td>
+                </tr>
+              ) : null}
             </tbody>
           </table>
         </div>
@@ -1351,15 +1444,18 @@ export function QuotesPage() {
   );
 }
 
-export function JobsPage() {
+export function JobsPage({ liveJobs = [] }: { liveJobs?: DashboardJob[] }) {
+  const pageJobs = liveJobs;
+  const revenue = pageJobs.reduce((sum, job) => sum + job.revenue, 0);
+
   return (
     <PageShell active="Jobs" eyebrow="Work management" title="Jobs">
       <KpiGrid
         items={[
-          { label: "Active jobs", value: "6", detail: "2 in progress now", tone: "blue", icon: Wrench },
-          { label: "Scheduled jobs", value: "14", detail: "Next 7 days", tone: "violet", icon: CalendarDays },
-          { label: "Completed jobs", value: "23", detail: "This month", tone: "emerald", icon: CheckCircle2 },
-          { label: "Revenue scheduled", value: "$18,920", detail: "Booked work value", tone: "emerald", icon: BadgeDollarSign },
+          { label: "Active jobs", value: String(pageJobs.filter((job) => ["In Progress", "Scheduled", "Pending"].includes(job.status)).length), detail: "From Supabase jobs", tone: "blue", icon: Wrench },
+          { label: "Scheduled jobs", value: String(pageJobs.filter((job) => job.status === "Scheduled").length), detail: "Jobs table status", tone: "violet", icon: CalendarDays },
+          { label: "Completed jobs", value: String(pageJobs.filter((job) => job.status === "Completed").length), detail: "Jobs table status", tone: "emerald", icon: CheckCircle2 },
+          { label: "Revenue scheduled", value: money.format(revenue), detail: "Booked work value", tone: "emerald", icon: BadgeDollarSign },
         ]}
       />
       <div className="grid gap-4 xl:grid-cols-[0.8fr_1.2fr]">
@@ -1371,7 +1467,7 @@ export function JobsPage() {
             { label: "Delayed", value: 3, color: "#bf000f" },
           ]} />
         </Card>
-        <Card title="Map View"><MapPreview title="Upcoming Jobs Map" /></Card>
+        <Card title="Map View"><MapPreview title="Upcoming Jobs Map" rows={pageJobs} /></Card>
       </div>
       <Card title="Jobs Table" action="Schedule job">
         <div className="overflow-x-auto">
@@ -1380,7 +1476,7 @@ export function JobsPage() {
               <tr>{["Client", "Service", "Address", "Date", "Assigned Crew", "Revenue", "Status"].map((head) => <th key={head} className="px-4 py-3 font-semibold">{head}</th>)}</tr>
             </thead>
             <tbody className="divide-y divide-stone-100">
-              {jobs.map((job) => (
+              {pageJobs.map((job) => (
                 <tr key={`${job.client}-jobs`}>
                   <td className="px-4 py-3 font-semibold">{job.client}</td>
                   <td className="px-4 py-3 text-stone-600">{job.service}</td>
@@ -1391,6 +1487,13 @@ export function JobsPage() {
                   <td className="px-4 py-3"><Badge tone={statusTone(job.status)}>{job.status}</Badge></td>
                 </tr>
               ))}
+              {pageJobs.length === 0 ? (
+                <tr>
+                  <td className="px-4 py-5 text-sm text-stone-500" colSpan={7}>
+                    No jobs found in Supabase yet.
+                  </td>
+                </tr>
+              ) : null}
             </tbody>
           </table>
         </div>
@@ -1400,15 +1503,24 @@ export function JobsPage() {
   );
 }
 
-export function InvoicesPage() {
+export function InvoicesPage({
+  liveInvoices = [],
+}: {
+  liveInvoices?: DashboardInvoice[];
+}) {
+  const pageInvoices = liveInvoices;
+  const outstanding = pageInvoices.reduce((sum, invoice) => sum + invoice.balance, 0);
+  const paidCount = pageInvoices.filter((invoice) => invoice.status === "Paid").length;
+  const overdueCount = pageInvoices.filter((invoice) => invoice.status === "Overdue").length;
+
   return (
     <PageShell active="Invoices" eyebrow="Payments" title="Invoices">
       <KpiGrid
         items={[
-          { label: "Outstanding balance", value: "$3,180", detail: "7 open invoices", tone: "orange", icon: WalletCards },
-          { label: "Paid invoices", value: "18", detail: "$6,540 collected", tone: "emerald", icon: CheckCircle2 },
-          { label: "Overdue invoices", value: "3", detail: "$1,000 at risk", tone: "red", icon: Bell },
-          { label: "Average payment time", value: "5.4d", detail: "Down 1.2 days", tone: "blue", icon: Clock3 },
+          { label: "Outstanding balance", value: money.format(outstanding), detail: `${pageInvoices.length} invoices in Supabase`, tone: "orange", icon: WalletCards },
+          { label: "Paid invoices", value: String(paidCount), detail: "Status = paid", tone: "emerald", icon: CheckCircle2 },
+          { label: "Overdue invoices", value: String(overdueCount), detail: "Status = overdue", tone: "red", icon: Bell },
+          { label: "Average payment time", value: "TBD", detail: "Needs payment timestamp", tone: "blue", icon: Clock3 },
         ]}
       />
       <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
@@ -1428,7 +1540,7 @@ export function InvoicesPage() {
               <tr>{["Invoice #", "Client", "Due Date", "Amount", "Paid", "Balance", "Status"].map((head) => <th key={head} className="px-4 py-3 font-semibold">{head}</th>)}</tr>
             </thead>
             <tbody className="divide-y divide-stone-100">
-              {invoices.map((invoice) => (
+              {pageInvoices.map((invoice) => (
                 <tr key={invoice.number}>
                   <td className="px-4 py-3 font-semibold">{invoice.number}</td>
                   <td className="px-4 py-3 text-stone-600">{invoice.client}</td>
@@ -1439,6 +1551,13 @@ export function InvoicesPage() {
                   <td className="px-4 py-3"><Badge tone={statusTone(invoice.status)}>{invoice.status}</Badge></td>
                 </tr>
               ))}
+              {pageInvoices.length === 0 ? (
+                <tr>
+                  <td className="px-4 py-5 text-sm text-stone-500" colSpan={7}>
+                    No invoices found in Supabase yet.
+                  </td>
+                </tr>
+              ) : null}
             </tbody>
           </table>
         </div>
@@ -1448,22 +1567,45 @@ export function InvoicesPage() {
   );
 }
 
-export function InsightsPage() {
+export function InsightsPage({
+  liveCustomers = [],
+  liveJobs = [],
+  liveQuotes = [],
+  liveInvoices = [],
+}: {
+  liveCustomers?: DashboardCustomer[];
+  liveJobs?: DashboardJob[];
+  liveQuotes?: DashboardQuote[];
+  liveInvoices?: DashboardInvoice[];
+}) {
+  const acceptedLiveQuotes = liveQuotes.filter((quote) => quote.status === "Accepted");
+  const liveAcceptedForecast = acceptedLiveQuotes.reduce(
+    (total, quote) => total + quote.value,
+    0,
+  );
+  const recurringForecast = liveCustomers.filter((client) => client.status === "Recurring").length * 500;
+  const completedRevenue = liveJobs
+    .filter((job) => job.status === "Completed")
+    .reduce((total, job) => total + job.revenue, 0);
+  const paidRevenue = liveInvoices
+    .filter((invoice) => invoice.status === "Paid")
+    .reduce((total, invoice) => total + invoice.paid, 0);
+
   return (
     <PageShell active="Insights" eyebrow="Business intelligence" title="Insights">
       <KpiGrid
         items={[
-          { label: "Repeat customer rate", value: "64%", detail: "+8 points year over year", tone: "emerald", icon: Users },
-          { label: "Average customer value", value: "$1,420", detail: "Across active clients", tone: "blue", icon: BadgeDollarSign },
-          { label: "Customer lifetime value", value: "$4,860", detail: "Top quartile accounts", tone: "violet", icon: TrendingUp },
-          { label: "Forecast next month", value: money.format(acceptedQuoteForecast + 7200 + 3130), detail: "Accepted + recurring", tone: "emerald", icon: BarChart3 },
+          { label: "Repeat customer rate", value: "TBD", detail: "Requires repeat completed jobs", tone: "emerald", icon: Users },
+          { label: "Average customer value", value: liveCustomers.length ? money.format(Math.round(paidRevenue / liveCustomers.length)) : "$0", detail: "Paid invoices / clients", tone: "blue", icon: BadgeDollarSign },
+          { label: "Completed job revenue", value: money.format(completedRevenue), detail: "Supabase jobs", tone: "violet", icon: TrendingUp },
+          { label: "Forecast next month", value: money.format(liveAcceptedForecast + recurringForecast), detail: "Accepted + recurring", tone: "emerald", icon: BarChart3 },
         ]}
       />
       <Card title="Forecast source of truth" action="Supabase tables: quotes + jobs + invoices">
         <div className="grid gap-3 p-4 text-sm text-stone-600 lg:grid-cols-4">
           <div className="rounded-none border border-stone-200 bg-stone-50 p-3">
             <p className="font-semibold text-stone-950">Accepted quotes</p>
-            <p className="mt-1">{money.format(acceptedQuoteForecast)} from quotes with status `accepted`.</p>
+            <p className="mt-1">{money.format(liveAcceptedForecast)} from quotes with status `accepted`.</p>
           </div>
           <div className="rounded-none border border-stone-200 bg-stone-50 p-3">
             <p className="font-semibold text-stone-950">Scheduled jobs</p>
@@ -1480,35 +1622,38 @@ export function InsightsPage() {
         </div>
       </Card>
       <div className="grid gap-4 xl:grid-cols-3">
-        <Card title="Monthly Revenue"><RevenueChart /></Card>
-        <Card title="Revenue by Service"><BarChart data={serviceRevenue} /></Card>
-        <Card title="Revenue by Client"><BarChart data={customers.slice(0, 5).map((client) => ({ label: client.name, value: client.lifetime }))} /></Card>
+        <Card title="Monthly Revenue"><RevenueChart data={[{ label: "Paid", value: paidRevenue }, { label: "Jobs", value: completedRevenue }, { label: "Accepted", value: liveAcceptedForecast }, { label: "Recurring", value: recurringForecast }]} /></Card>
+        <Card title="Revenue by Service"><BarChart data={liveJobs.length > 0 ? liveJobs.map((job) => ({ label: job.service, value: job.revenue })) : []} /></Card>
+        <Card title="Revenue by Client"><BarChart data={liveCustomers.slice(0, 5).map((client) => ({ label: client.name, value: client.lifetime }))} /></Card>
       </div>
       <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
         <Card title="Revenue Heat Map"><HeatMap /></Card>
-        <Card title="Lead Conversion Analytics"><Funnel steps={[{ label: "Requests", value: 128 }, { label: "Quotes", value: 84 }, { label: "Jobs", value: 57 }, { label: "Invoices", value: 49 }]} /></Card>
+        <Card title="Lead Conversion Analytics"><Funnel steps={[{ label: "Clients", value: liveCustomers.length }, { label: "Quotes", value: liveQuotes.length }, { label: "Jobs", value: liveJobs.length }, { label: "Invoices", value: liveInvoices.length }]} /></Card>
       </div>
       <div className="grid gap-4 xl:grid-cols-3">
         <Card title="Geographic Analytics">
           <div className="divide-y divide-stone-100">
-            {neighborhoodRevenue.map((area) => (
-              <div key={area.area} className="flex items-center justify-between px-4 py-3 text-sm">
+            {liveCustomers.map((area) => (
+              <div key={`${area.city}-${area.name}`} className="flex items-center justify-between px-4 py-3 text-sm">
                 <div>
-                  <p className="font-semibold text-stone-950">{area.area}</p>
-                  <p className="text-xs text-stone-500">{area.jobs} completed jobs</p>
+                  <p className="font-semibold text-stone-950">{area.city}</p>
+                  <p className="text-xs text-stone-500">{area.name}</p>
                 </div>
-                <p className="font-semibold text-stone-950">{money.format(area.revenue)}</p>
+                <p className="font-semibold text-stone-950">{money.format(area.lifetime)}</p>
               </div>
             ))}
+            {liveCustomers.length === 0 ? (
+              <div className="px-4 py-5 text-sm text-stone-500">No client geography found in Supabase yet.</div>
+            ) : null}
           </div>
         </Card>
-        <Card title="Service Analytics"><BarChart data={serviceRevenue} /></Card>
+        <Card title="Service Analytics"><BarChart data={liveJobs.map((job) => ({ label: job.service, value: job.revenue }))} /></Card>
         <Card title="Revenue Forecast">
           <div className="space-y-3 p-4">
             {[
-              ["Accepted quotes", acceptedQuoteForecast],
-              ["Recurring customers", 7200],
-              ["Historical lift", 3130],
+              ["Accepted quotes", liveAcceptedForecast],
+              ["Recurring customers", recurringForecast],
+              ["Manual adjustments", 0],
             ].map(([label, value]) => (
               <div key={label} className="rounded-none border border-stone-200 p-3">
                 <p className="text-sm font-semibold text-stone-950">{label}</p>
