@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 :root {
   --ink: #0f1b08;
@@ -1495,6 +1493,7 @@ h1 span {
   min-width: 0;
   padding: clamp(20px, 3vw, 28px);
   border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 0;
   background: rgba(8, 12, 10, 0.38);
   backdrop-filter: blur(12px);
   box-shadow: 0 24px 56px rgba(0, 0, 0, 0.24);
@@ -1575,7 +1574,7 @@ h1 span {
   width: 100%;
   padding: 11px 13px;
   border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 8px;
+  border-radius: 0;
   background: rgba(0, 0, 0, 0.24);
   color: rgba(255, 255, 255, 0.92);
   font-family: inherit;
@@ -1624,7 +1623,7 @@ h1 span {
   min-height: 42px;
   padding: 11px 13px;
   border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 8px;
+  border-radius: 0;
   background: rgba(0, 0, 0, 0.24);
   color: rgba(255, 255, 255, 0.92);
   font-family: inherit;
@@ -1672,7 +1671,7 @@ h1 span {
   margin: 0;
   padding: 6px;
   border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 10px;
+  border-radius: 0;
   background: rgba(12, 16, 14, 0.94);
   backdrop-filter: blur(16px);
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
@@ -1684,7 +1683,7 @@ h1 span {
   width: 100%;
   padding: 10px 12px;
   border: 0;
-  border-radius: 6px;
+  border-radius: 0;
   background: transparent;
   color: rgba(255, 255, 255, 0.88);
   font-family: inherit;
@@ -1726,6 +1725,7 @@ h1 span {
   min-height: 44px;
   padding: 0 24px;
   border: 0;
+  border-radius: 0;
   background: rgba(255, 255, 255, 0.88);
   color: rgba(7, 10, 9, 0.92);
   font-family: inherit;
@@ -2545,4 +2545,152 @@ h1 span {
   box-shadow: 0 16px 34px rgba(0, 0, 0, 0.26);
   transform: translateY(-1px);
   outline: none;
+}
+
+.stornway-dashboard h1,
+.stornway-dashboard h2,
+.stornway-dashboard h3,
+.stornway-dashboard p {
+  max-width: none;
+  font-family: var(--font-sans);
+  letter-spacing: 0;
+}
+
+.stornway-dashboard h1 {
+  margin: 0.5rem 0 0;
+  font-size: 1.875rem;
+  font-weight: 600;
+  line-height: 2.25rem;
+}
+
+.stornway-dashboard h2 {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+}
+
+.stornway-dashboard h3 {
+  margin: 0;
+  font-weight: 600;
+}
+
+.stornway-dashboard p {
+  margin-bottom: 0;
+}
+
+.stornway-dashboard {
+  background: var(--fog) !important;
+  color: var(--ink);
+  overflow-x: hidden;
+}
+
+.stornway-dashboard *,
+.stornway-dashboard *::before,
+.stornway-dashboard *::after {
+  min-width: 0;
+}
+
+.stornway-dashboard .rounded,
+.stornway-dashboard .rounded-md,
+.stornway-dashboard .rounded-lg,
+.stornway-dashboard .rounded-xl {
+  border-radius: 0 !important;
+}
+
+.stornway-dashboard .bg-white,
+.stornway-dashboard .bg-white\/90,
+.stornway-dashboard .bg-white\/95 {
+  background-color: var(--paper) !important;
+}
+
+.stornway-dashboard .bg-stone-50,
+.stornway-dashboard .bg-stone-100 {
+  background-color: var(--fog) !important;
+}
+
+.stornway-dashboard .border-stone-100,
+.stornway-dashboard .border-stone-200,
+.stornway-dashboard .border-stone-300 {
+  border-color: var(--line) !important;
+}
+
+.stornway-dashboard .text-stone-400,
+.stornway-dashboard .text-stone-500,
+.stornway-dashboard .text-stone-600,
+.stornway-dashboard .text-stone-700,
+.stornway-dashboard .text-stone-800 {
+  color: var(--muted) !important;
+}
+
+.stornway-dashboard .text-stone-950 {
+  color: var(--ink) !important;
+}
+
+.stornway-dashboard .bg-emerald-50,
+.stornway-dashboard .bg-blue-50,
+.stornway-dashboard .bg-violet-50,
+.stornway-dashboard .bg-orange-50,
+.stornway-dashboard .bg-amber-50,
+.stornway-dashboard .bg-red-50,
+.stornway-dashboard .bg-lime-50,
+.stornway-dashboard .bg-sky-50 {
+  background-color: rgba(15, 27, 8, 0.055) !important;
+}
+
+.stornway-dashboard .bg-emerald-100,
+.stornway-dashboard .bg-blue-500,
+.stornway-dashboard .bg-emerald-600,
+.stornway-dashboard .bg-emerald-700,
+.stornway-dashboard .bg-emerald-800,
+.stornway-dashboard .bg-emerald-900 {
+  background-color: var(--moss) !important;
+}
+
+.stornway-dashboard .text-emerald-700,
+.stornway-dashboard .text-emerald-800,
+.stornway-dashboard .text-emerald-950,
+.stornway-dashboard .text-blue-700,
+.stornway-dashboard .text-violet-700,
+.stornway-dashboard .text-lime-700,
+.stornway-dashboard .text-sky-700 {
+  color: var(--moss) !important;
+}
+
+.stornway-dashboard .text-orange-700,
+.stornway-dashboard .text-amber-700,
+.stornway-dashboard .text-amber-800,
+.stornway-dashboard .text-red-700 {
+  color: var(--clay) !important;
+}
+
+.stornway-dashboard .border-emerald-700,
+.stornway-dashboard .focus\:border-emerald-700:focus,
+.stornway-dashboard .focus\:border-emerald-700:focus-visible {
+  border-color: var(--moss) !important;
+}
+
+.stornway-dashboard .ring-emerald-200,
+.stornway-dashboard .ring-blue-200,
+.stornway-dashboard .ring-violet-200,
+.stornway-dashboard .ring-orange-200,
+.stornway-dashboard .ring-amber-200,
+.stornway-dashboard .ring-red-200,
+.stornway-dashboard .ring-sky-200,
+.stornway-dashboard .ring-stone-200 {
+  --tw-ring-color: var(--line) !important;
+}
+
+.stornway-dashboard .shadow-sm,
+.stornway-dashboard .shadow-xl,
+.stornway-dashboard .shadow-lg {
+  box-shadow: 0 1px 0 var(--line) !important;
+}
+
+.stornway-dashboard table {
+  width: 100%;
+}
+
+.stornway-dashboard .overflow-x-auto {
+  max-width: 100%;
 }

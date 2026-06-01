@@ -16,6 +16,16 @@ const MS_PER_WORD = 95;
 const MAX_READ_MS = 10000;
 const MANUAL_PAUSE_MS = 12000;
 
+interface LiveReviewResponse {
+  body?: Array<{
+    id: string;
+    name: string;
+    rating: number;
+    text: string;
+    date?: string;
+  }>;
+}
+
 function countWords(text: string): number {
   const trimmed = text.trim();
   if (!trimmed) {
@@ -64,9 +74,10 @@ function ReviewStars({ rating }: { rating: number }) {
 }
 
 export function ReviewsSection() {
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isContentVisible, setIsContentVisible] = useState(true);
+  const [liveReviews, setLiveReviews] = useState<FeaturedReview[]>(FEATURED_REVIEWS);
   const pauseUntilRef = useRef(0);
   const isHoveredRef = useRef(false);
   const fadeTimeoutRef = useRef<number | null>(null);
@@ -75,8 +86,43 @@ export function ReviewsSection() {
   const googleListingUrl =
     process.env.NEXT_PUBLIC_GOOGLE_BUSINESS_URL ?? DEFAULT_GOOGLE_LISTING_URL;
 
-  const reviews = FEATURED_REVIEWS;
+  const reviews = liveReviews.length > 0 ? liveReviews : FEATURED_REVIEWS;
   const activeReview = reviews[currentIndex]!;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadReviews() {
+      try {
+        const response = await fetch(`/api/getReviews?lang=${language}`);
+        if (!response.ok) return;
+
+        const payload = (await response.json()) as LiveReviewResponse;
+        const nextReviews = (payload.body ?? [])
+          .filter((review) => review.text?.trim())
+          .map((review) => ({
+            id: review.id,
+            name: review.name,
+            rating: review.rating,
+            text: review.text,
+            relativeDate: review.date,
+          }));
+
+        if (!cancelled && nextReviews.length > 0) {
+          setLiveReviews(nextReviews);
+          setCurrentIndex(0);
+        }
+      } catch (error) {
+        console.warn("[reviews] Could not load live reviews:", error);
+      }
+    }
+
+    loadReviews();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [language]);
 
   useEffect(() => {
     prefersReducedMotionRef.current = window.matchMedia(

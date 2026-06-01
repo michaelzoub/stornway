@@ -5,8 +5,24 @@ import {
   verifyDashboardSession,
 } from "@/lib/dashboard-auth";
 
+function isLocalDevelopmentRequest(request: NextRequest): boolean {
+  if (process.env.NODE_ENV === "production") return false;
+
+  const hostname = request.nextUrl.hostname.toLowerCase();
+  return (
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "::1" ||
+    hostname.endsWith(".localhost")
+  );
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
+
+  if (isLocalDevelopmentRequest(request)) {
+    return NextResponse.next();
+  }
 
   if (!isDashboardPasswordConfigured()) {
     if (process.env.NODE_ENV === "production") {
