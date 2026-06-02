@@ -49,6 +49,8 @@ export type DashboardQuote = {
 export type DashboardInvoice = {
   number: string;
   client: string;
+  email: string;
+  phone: string;
   due: string;
   amount: number;
   paid: number;
@@ -109,6 +111,12 @@ type SupabaseInvoiceRow = {
   total?: number | string | null;
   amount_paid?: number | string | null;
   clients?: SupabaseClientRow | null;
+  invoice_line_items?: Array<{
+    product_service?: string | null;
+    description?: string | null;
+    quantity?: number | string | null;
+    unit_price?: number | string | null;
+  }> | null;
 };
 
 const SERVICE_LABELS: Record<ContactServiceId, string> = {
@@ -321,7 +329,7 @@ export async function getDashboardQuotes(): Promise<DashboardQuote[]> {
 export async function getDashboardInvoices(): Promise<DashboardInvoice[]> {
   const invoices = await fetchSupabaseRows<SupabaseInvoiceRow>(
     "invoices",
-    "select=*,clients(*)&order=created_at.desc",
+    "select=*,clients(*),invoice_line_items(*)&order=created_at.desc",
   );
 
   return invoices.map((invoice) => {
@@ -331,6 +339,8 @@ export async function getDashboardInvoices(): Promise<DashboardInvoice[]> {
     return {
       number: invoice.invoice_number || "Draft",
       client: invoice.clients?.name || "Client to confirm",
+      email: invoice.clients?.email || "",
+      phone: invoice.clients?.phone || "",
       due: formatDate(invoice.due_at || invoice.issued_at),
       amount,
       paid,
@@ -339,4 +349,3 @@ export async function getDashboardInvoices(): Promise<DashboardInvoice[]> {
     };
   });
 }
-

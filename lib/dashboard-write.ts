@@ -23,6 +23,14 @@ type SupabaseClient = {
   address: string | null;
 };
 
+type JobInput = {
+  client: ClientInput;
+  serviceType: string;
+  scheduledStart: string;
+  scheduledEnd: string;
+  notes: string;
+};
+
 const USER_AGENT = "StornwayDashboardWrite/1.0";
 
 export function escapeHtml(value: string) {
@@ -317,6 +325,82 @@ export async function updateInvoiceStatus(id: string, status: "draft" | "sent") 
   if (!response.ok) {
     throw new Error(`Invoice status update failed: ${await response.text()}`);
   }
+}
+
+export async function updateQuoteStatusByNumber(quoteNumber: string, status: "draft" | "sent") {
+  const response = await supabaseFetch(
+    `quotes?quote_number=eq.${encodeURIComponent(quoteNumber)}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        status,
+        sent_at: status === "sent" ? new Date().toISOString() : null,
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`Quote status update failed: ${await response.text()}`);
+  }
+}
+
+export async function updateInvoiceStatusByNumber(
+  invoiceNumber: string,
+  status: "draft" | "sent",
+) {
+  const response = await supabaseFetch(
+    `invoices?invoice_number=eq.${encodeURIComponent(invoiceNumber)}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`Invoice status update failed: ${await response.text()}`);
+  }
+}
+
+export function getJobFromForm(formData: FormData): JobInput {
+  return {
+    client: getClientFromForm(formData),
+    serviceType: requiredString(formData, "service_type"),
+    scheduledStart: requiredString(formData, "scheduled_start"),
+    scheduledEnd: optionalString(formData, "scheduled_end"),
+    notes: optionalString(formData, "notes"),
+  };
+}
+
+export async function createJob(input: JobInput) {
+  const client = await ensureClient(input.client);
+  const response = await supabaseFetch("jobs", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Prefer: "return=representation",
+    },
+    body: JSON.stringify({
+      client_id: client.id,
+      client_name: client.name,
+      client_email: client.email,
+      client_phone: client.phone,
+      address: input.client.address || null,
+      job_type: input.serviceType || "general",
+      status: "scheduled",
+      scheduled_start: input.scheduledStart,
+      scheduled_end: input.scheduledEnd || null,
+      notes: input.notes || null,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Job create failed: ${await response.text()}`);
+  }
+
+  const [job] = (await response.json()) as { id: string }[];
+  return job;
 }
 
 export async function sendDashboardEmail(input: {

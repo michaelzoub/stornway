@@ -34,7 +34,6 @@ import {
   Search,
   Send,
   Sparkles,
-  Smartphone,
   TrendingUp,
   Trash2,
   Users,
@@ -889,11 +888,15 @@ export function RequestsPage({
   const requestOptions = allRequests.filter((request) => request.email);
   const [selectedRequestId, setSelectedRequestId] = useState(requestOptions[0]?.id ?? "");
   const [selectedQuoteRequestId, setSelectedQuoteRequestId] = useState(allRequests[0]?.id ?? "");
+  const [selectedJobRequestId, setSelectedJobRequestId] = useState(allRequests[0]?.id ?? "");
   const selectedEmailRequest =
     requestOptions.find((request) => request.id === selectedRequestId) ??
     requestOptions[0];
   const selectedQuoteRequest =
     allRequests.find((request) => request.id === selectedQuoteRequestId) ??
+    allRequests[0];
+  const selectedJobRequest =
+    allRequests.find((request) => request.id === selectedJobRequestId) ??
     allRequests[0];
   const newRequests = allRequests.filter((request) => request.status === "New").length;
   const contactedRequests = allRequests.filter((request) => request.status === "Contacted").length;
@@ -929,13 +932,19 @@ export function RequestsPage({
                     </p>
                     <div className="mt-3 flex flex-wrap gap-2">
                       {request.email ? (
-                        <a
-                          href={`mailto:${request.email}`}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedRequestId(request.id ?? "");
+                            document
+                              .getElementById("request-email-composer")
+                              ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                          }}
                           className="inline-flex items-center gap-1 rounded-none border border-stone-200 px-2 py-1 text-xs font-semibold text-stone-700 hover:bg-stone-50"
                         >
                           <Mail size={12} aria-hidden="true" />
                           Email
-                        </a>
+                        </button>
                       ) : null}
                       <a
                         href="#request-quote-creator"
@@ -991,8 +1000,41 @@ export function RequestsPage({
           ) : null}
         </div>
       </Card>
+      <Card title="Create Job From Request" action="Saves to jobs table">
+        <div className="grid gap-4 p-4 xl:grid-cols-[0.7fr_1.3fr]">
+          <div className="space-y-3">
+            <label className="grid gap-1 text-sm font-semibold text-stone-700">
+              Request
+              <select
+                value={selectedJobRequest?.id ?? ""}
+                onChange={(event) => setSelectedJobRequestId(event.target.value)}
+                className="rounded-none border border-stone-200 bg-white px-3 py-2 text-sm font-normal text-stone-600"
+              >
+                {allRequests.length ? (
+                  allRequests.map((request) => (
+                    <option key={request.id ?? `${request.name}-${request.date}`} value={request.id ?? ""}>
+                      {request.name} - {request.service}
+                    </option>
+                  ))
+                ) : (
+                  <option value="">No requests available</option>
+                )}
+              </select>
+            </label>
+            {selectedJobRequest ? (
+              <div className="rounded-none border border-stone-200 bg-stone-50 p-3 text-sm text-stone-600">
+                <p className="font-semibold text-stone-950">{selectedJobRequest.name}</p>
+                <p className="mt-1">{selectedJobRequest.email || "No email"}</p>
+                <p>{selectedJobRequest.phone || "No phone"}</p>
+                <p className="mt-2">{selectedJobRequest.message || selectedJobRequest.service}</p>
+              </div>
+            ) : null}
+          </div>
+          {selectedJobRequest ? <RequestJobForm request={selectedJobRequest} /> : null}
+        </div>
+      </Card>
       <Card title="Send Email From Request" action="Uses Resend">
-        <form action="/api/dashboard/email" method="post" className="grid gap-3 p-4 lg:grid-cols-[0.8fr_1fr]">
+        <form id="request-email-composer" action="/api/dashboard/email" method="post" className="grid gap-3 p-4 lg:grid-cols-[0.8fr_1fr]">
           <div className="space-y-3">
             <label className="grid gap-1 text-sm font-semibold text-stone-700">
               Request
@@ -1128,16 +1170,65 @@ function RequestQuoteForm({ request }: { request: DashboardRequest }) {
   );
 }
 
-function getQuoteSendHref(quote: Quote, channel: string) {
-  const subject = `Stornway ${quote.number}`;
-  const body = `Hi ${quote.client},\n\nHere is your Stornway estimate for ${quote.service}: ${moneyWithCents.format(quote.value)}.\n\nReply here with any questions or to approve the quote.\n\nStornway Group`;
-
-  if (channel === "Phone") return `tel:${quote.phone}`;
-  if (channel === "SMS") {
-    return `sms:${quote.phone}?&body=${encodeURIComponent(body)}`;
-  }
-
-  return `mailto:${quote.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+function RequestJobForm({ request }: { request: DashboardRequest }) {
+  return (
+    <form action="/api/dashboard/jobs" method="post" className="grid gap-3">
+      <input type="hidden" name="client_name" value={request.name} />
+      <input type="hidden" name="client_email" value={request.email ?? ""} />
+      <input type="hidden" name="client_phone" value={request.phone ?? ""} />
+      <label className="grid gap-1 text-sm font-semibold text-stone-700">
+        Service
+        <input
+          name="service_type"
+          required
+          defaultValue={request.service}
+          className="rounded-none border border-stone-200 px-3 py-2 text-sm font-normal text-stone-600"
+        />
+      </label>
+      <label className="grid gap-1 text-sm font-semibold text-stone-700">
+        Job address
+        <input
+          name="client_address"
+          required
+          defaultValue={request.address === "Address to confirm" ? "" : request.address}
+          placeholder="Client address"
+          className="rounded-none border border-stone-200 px-3 py-2 text-sm font-normal text-stone-600"
+        />
+      </label>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="grid gap-1 text-sm font-semibold text-stone-700">
+          Start
+          <input
+            name="scheduled_start"
+            required
+            type="datetime-local"
+            className="rounded-none border border-stone-200 px-3 py-2 text-sm font-normal text-stone-600"
+          />
+        </label>
+        <label className="grid gap-1 text-sm font-semibold text-stone-700">
+          End
+          <input
+            name="scheduled_end"
+            type="datetime-local"
+            className="rounded-none border border-stone-200 px-3 py-2 text-sm font-normal text-stone-600"
+          />
+        </label>
+      </div>
+      <label className="grid gap-1 text-sm font-semibold text-stone-700">
+        Notes
+        <textarea
+          name="notes"
+          rows={4}
+          defaultValue={request.message ?? ""}
+          className="rounded-none border border-stone-200 px-3 py-2 text-sm font-normal text-stone-600"
+        />
+      </label>
+      <button type="submit" className="inline-flex w-fit items-center gap-2 rounded-none bg-emerald-800 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-900">
+        <CalendarDays size={16} aria-hidden="true" />
+        Create job
+      </button>
+    </form>
+  );
 }
 
 function makeEditableLineItem(
@@ -1373,7 +1464,6 @@ function QuoteDocumentPreview({
 
 function QuoteDeliveryPanel({ rows }: { rows: DashboardQuote[] }) {
   const [selectedNumber, setSelectedNumber] = useState(rows[0]?.number ?? "");
-  const [channel, setChannel] = useState("Email");
   const [documentType, setDocumentType] = useState<"Quote" | "Invoice">("Quote");
   const selectedQuote = useMemo(
     () => rows.find((quote) => quote.number === selectedNumber) ?? rows[0],
@@ -1388,7 +1478,7 @@ function QuoteDeliveryPanel({ rows }: { rows: DashboardQuote[] }) {
       </Card>
     );
   }
-  const sendHref = getQuoteSendHref(selectedQuote, channel);
+  const defaultMessage = `Hi ${selectedQuote.client},\n\nHere is your Stornway ${documentType.toLowerCase()} for ${selectedQuote.service}: ${moneyWithCents.format(selectedQuote.value)}.\n\nReply here with any questions or to approve.\n\nStornway Group`;
 
   return (
     <div id="quote-delivery" className="grid gap-4 xl:grid-cols-[0.82fr_1.18fr]">
@@ -1409,19 +1499,7 @@ function QuoteDeliveryPanel({ rows }: { rows: DashboardQuote[] }) {
             </select>
           </label>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="grid gap-1 text-sm font-semibold text-stone-700">
-              Send by
-              <select
-                value={channel}
-                onChange={(event) => setChannel(event.target.value)}
-                className="rounded-none border border-stone-200 bg-white px-3 py-2 text-sm font-normal text-stone-600"
-              >
-                <option>Email</option>
-                <option>SMS</option>
-                <option>Phone</option>
-              </select>
-            </label>
+          <div className="grid gap-3">
             <label className="grid gap-1 text-sm font-semibold text-stone-700">
               Preview
               <select
@@ -1442,14 +1520,38 @@ function QuoteDeliveryPanel({ rows }: { rows: DashboardQuote[] }) {
             <p className="mt-2">{selectedQuote.service}</p>
           </div>
 
-          <div className="grid gap-2 sm:grid-cols-3">
-            <a
-              href={sendHref}
-              className="inline-flex items-center justify-center gap-2 rounded-none bg-emerald-800 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-900"
+          <form action="/api/dashboard/send-document" method="post" className="grid gap-3">
+            <input type="hidden" name="document_type" value={documentType} />
+            <input type="hidden" name="document_number" value={selectedQuote.number} />
+            <input type="hidden" name="to" value={selectedQuote.email} />
+            <input type="hidden" name="return_to" value="/dashboard/quotes" />
+            <label className="grid gap-1 text-sm font-semibold text-stone-700">
+              Subject
+              <input
+                name="subject"
+                defaultValue={`Stornway ${selectedQuote.number}`}
+                className="rounded-none border border-stone-200 px-3 py-2 text-sm font-normal text-stone-600"
+              />
+            </label>
+            <label className="grid gap-1 text-sm font-semibold text-stone-700">
+              Message
+              <textarea
+                name="message"
+                rows={5}
+                defaultValue={defaultMessage}
+                className="rounded-none border border-stone-200 px-3 py-2 text-sm font-normal text-stone-600"
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={!selectedQuote.email}
+              className="inline-flex items-center justify-center gap-2 rounded-none bg-emerald-800 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-900 disabled:cursor-not-allowed disabled:bg-stone-300"
             >
-              {channel === "SMS" ? <Smartphone size={16} aria-hidden="true" /> : <Send size={16} aria-hidden="true" />}
-              Send
-            </a>
+              <Send size={16} aria-hidden="true" />
+              Send with Resend
+            </button>
+          </form>
+          <div className="grid gap-2 sm:grid-cols-2">
             <button
               type="button"
               onClick={() => window.print()}
@@ -1514,13 +1616,26 @@ export function QuotesPage({ liveQuotes = [] }: { liveQuotes?: DashboardQuote[] 
                   <td className="px-4 py-3 text-stone-600">{quote.created}</td>
                   <td className="px-4 py-3"><Badge tone={statusTone(quote.status)}>{quote.status}</Badge></td>
                   <td className="px-4 py-3">
-                    <a
-                      href={getQuoteSendHref(quote, "Email")}
-                      className="inline-flex items-center gap-2 rounded-none border border-stone-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-stone-800 hover:bg-stone-100"
-                    >
+                    <form action="/api/dashboard/send-document" method="post">
+                      <input type="hidden" name="document_type" value="Quote" />
+                      <input type="hidden" name="document_number" value={quote.number} />
+                      <input type="hidden" name="to" value={quote.email} />
+                      <input type="hidden" name="subject" value={`Stornway ${quote.number}`} />
+                      <input type="hidden" name="return_to" value="/dashboard/quotes" />
+                      <input
+                        type="hidden"
+                        name="message"
+                        value={`Hi ${quote.client},\n\nHere is your Stornway quote for ${quote.service}: ${moneyWithCents.format(quote.value)}.\n\nReply here with any questions or to approve.\n\nStornway Group`}
+                      />
+                      <button
+                        type="submit"
+                        disabled={!quote.email}
+                        className="inline-flex items-center gap-2 rounded-none border border-stone-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-stone-800 hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
                       <Mail size={14} aria-hidden="true" />
-                      Email
-                    </a>
+                        Send
+                      </button>
+                    </form>
                   </td>
                 </tr>
               ))}
@@ -1731,11 +1846,11 @@ export function InvoicesPage({
           <PieChart title="Payment status" segments={invoiceStatusSegments} />
         </Card>
       </div>
-      <Card title="Invoice Table" action="Create invoice">
+      <Card title="Invoice Table" action="Send from dashboard">
         <div className="overflow-x-auto">
-          <table className="min-w-[860px] w-full text-left text-sm">
+          <table className="min-w-[960px] w-full text-left text-sm">
             <thead className="text-xs uppercase tracking-[0.08em] text-stone-400">
-              <tr>{["Invoice #", "Client", "Due Date", "Amount", "Paid", "Balance", "Status"].map((head) => <th key={head} className="px-4 py-3 font-semibold">{head}</th>)}</tr>
+              <tr>{["Invoice #", "Client", "Due Date", "Amount", "Paid", "Balance", "Status", "Send"].map((head) => <th key={head} className="px-4 py-3 font-semibold">{head}</th>)}</tr>
             </thead>
             <tbody className="divide-y divide-stone-100">
               {pageInvoices.map((invoice) => (
@@ -1747,11 +1862,49 @@ export function InvoicesPage({
                   <td className="px-4 py-3 text-stone-600">{money.format(invoice.paid)}</td>
                   <td className="px-4 py-3 font-semibold">{money.format(invoice.balance)}</td>
                   <td className="px-4 py-3"><Badge tone={statusTone(invoice.status)}>{invoice.status}</Badge></td>
+                  <td className="px-4 py-3">
+                    <details className="w-[260px] rounded-none border border-stone-200 bg-white">
+                      <summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-emerald-800">
+                        Send invoice
+                      </summary>
+                      <form action="/api/dashboard/send-document" method="post" className="grid gap-2 border-t border-stone-200 p-3">
+                        <input type="hidden" name="document_type" value="Invoice" />
+                        <input type="hidden" name="document_number" value={invoice.number} />
+                        <input type="hidden" name="to" value={invoice.email} />
+                        <input type="hidden" name="return_to" value="/dashboard/invoices" />
+                        <label className="grid gap-1 text-xs font-semibold text-stone-700">
+                          Subject
+                          <input
+                            name="subject"
+                            defaultValue={`Stornway ${invoice.number}`}
+                            className="rounded-none border border-stone-200 px-2 py-1.5 font-normal text-stone-600"
+                          />
+                        </label>
+                        <label className="grid gap-1 text-xs font-semibold text-stone-700">
+                          Message
+                          <textarea
+                            name="message"
+                            rows={4}
+                            defaultValue={`Hi ${invoice.client},\n\nYour Stornway invoice is ready. Total due: ${moneyWithCents.format(invoice.balance || invoice.amount)}.\n\nPlease reply here with any questions.\n\nStornway Group`}
+                            className="rounded-none border border-stone-200 px-2 py-1.5 font-normal text-stone-600"
+                          />
+                        </label>
+                        <button
+                          type="submit"
+                          disabled={!invoice.email}
+                          className="inline-flex items-center justify-center gap-2 rounded-none bg-emerald-800 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-900 disabled:cursor-not-allowed disabled:bg-stone-300"
+                        >
+                          <Send size={14} aria-hidden="true" />
+                          Send with Resend
+                        </button>
+                      </form>
+                    </details>
+                  </td>
                 </tr>
               ))}
               {pageInvoices.length === 0 ? (
                 <tr>
-                  <td className="px-4 py-5 text-sm text-stone-500" colSpan={7}>
+                  <td className="px-4 py-5 text-sm text-stone-500" colSpan={8}>
                     No invoices found in Supabase yet.
                   </td>
                 </tr>
