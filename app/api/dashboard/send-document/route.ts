@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   escapeHtml,
   getOptionalFormString,
+  readDashboardFormData,
   sendDashboardEmail,
   updateInvoiceStatusByNumber,
   updateQuoteStatusByNumber,
@@ -9,8 +10,15 @@ import {
 
 export const runtime = "nodejs";
 
+export function GET(request: Request) {
+  return NextResponse.redirect(new URL("/dashboard", request.url));
+}
+
 export async function POST(request: Request) {
-  const formData = await request.formData();
+  const formData = await readDashboardFormData(request);
+  if (!formData) {
+    return NextResponse.redirect(new URL("/dashboard?error=form-data", request.url), 303);
+  }
   const documentType = getOptionalFormString(formData, "document_type");
   const documentNumber = getOptionalFormString(formData, "document_number");
   const to = getOptionalFormString(formData, "to");

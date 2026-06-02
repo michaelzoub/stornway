@@ -6,14 +6,25 @@ import {
   getLineItemsFromForm,
   getLineItemsTotal,
   getOptionalFormString,
+  readDashboardFormData,
   sendDashboardEmail,
   updateInvoiceStatus,
 } from "@/lib/dashboard-write";
 
 export const runtime = "nodejs";
 
+export function GET(request: Request) {
+  return NextResponse.redirect(new URL("/dashboard/invoices", request.url));
+}
+
 export async function POST(request: Request) {
-  const formData = await request.formData();
+  const formData = await readDashboardFormData(request);
+  if (!formData) {
+    return NextResponse.redirect(
+      new URL("/dashboard/invoices?error=form-data", request.url),
+      303,
+    );
+  }
   const client = getClientFromForm(formData);
   const lineItems = getLineItemsFromForm(formData);
   const firstLineItem = lineItems[0];

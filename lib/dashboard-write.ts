@@ -137,6 +137,14 @@ export function getOptionalFormString(formData: FormData, key: string) {
   return optionalString(formData, key);
 }
 
+export async function readDashboardFormData(request: Request) {
+  try {
+    return await request.formData();
+  } catch {
+    return null;
+  }
+}
+
 export function makeQuoteNumber() {
   return `Q-${new Date().toISOString().slice(0, 10).replaceAll("-", "")}-${randomUUID().slice(0, 4).toUpperCase()}`;
 }
