@@ -253,10 +253,10 @@ function QuickActions() {
       ))}
       <a
         href="/dashboard/requests"
-        className="inline-flex items-center gap-2 rounded-none bg-emerald-800 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-900"
+        className="inline-flex items-center gap-2 rounded-none border border-emerald-700 bg-white px-3 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-50"
       >
-        <Sparkles size={16} aria-hidden="true" />
-        Review leads
+        <Inbox size={16} aria-hidden="true" />
+        Requests
       </a>
     </div>
   );
