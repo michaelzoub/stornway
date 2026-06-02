@@ -85,7 +85,11 @@ const navItems = [
 ];
 
 export type DashboardRequest = {
+  id?: string;
   name: string;
+  email?: string;
+  phone?: string;
+  message?: string;
   service: string;
   address: string;
   date: string;
@@ -179,13 +183,8 @@ function PageShell({
             })}
           </nav>
           <div className="border-t border-stone-200 p-4">
-            <div className="rounded-none bg-stone-50 p-3">
-              <p className="text-sm font-semibold text-stone-950">Next goal</p>
-              <p className="mt-1 text-xs text-stone-500">Complete 30 jobs this month</p>
-              <div className="mt-3 h-2 rounded-none bg-stone-200">
-                <div className="h-2 w-[77%] rounded-none bg-emerald-700" />
-              </div>
-            </div>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-stone-400">Operations</p>
+            <p className="mt-1 text-sm font-semibold text-stone-800">Stornway Group</p>
           </div>
         </aside>
 
@@ -223,7 +222,6 @@ function PageShell({
                 <FilterButton label="All crews" />
               </div>
             </div>
-            <LoadingState />
             {children}
           </div>
         </section>
@@ -268,24 +266,6 @@ function FilterButton({ label }: { label: string }) {
       <Filter size={15} aria-hidden="true" />
       {label}
     </button>
-  );
-}
-
-function LoadingState() {
-  return (
-    <div className="rounded-none border border-stone-200 bg-white p-3 shadow-sm">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-stone-400">Supabase status</p>
-          <p className="mt-1 text-sm text-stone-500">Dashboard data is loaded from Supabase. Empty areas mean the related table has no rows yet.</p>
-        </div>
-        <div className="hidden flex-1 gap-2 md:flex">
-          <span className="h-2 flex-1 rounded-none bg-stone-100" />
-          <span className="h-2 flex-1 rounded-none bg-stone-100" />
-          <span className="h-2 flex-1 rounded-none bg-stone-100" />
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -898,6 +878,11 @@ export function RequestsPage({
 }) {
   const stages = ["New", "Contacted", "Quote Sent", "Won", "Lost"];
   const allRequests = liveRequests;
+  const requestOptions = allRequests.filter((request) => request.email);
+  const [selectedRequestId, setSelectedRequestId] = useState(requestOptions[0]?.id ?? "");
+  const selectedEmailRequest =
+    requestOptions.find((request) => request.id === selectedRequestId) ??
+    requestOptions[0];
   const newRequests = allRequests.filter((request) => request.status === "New").length;
   const contactedRequests = allRequests.filter((request) => request.status === "Contacted").length;
   const quotedRequests = allRequests.filter((request) => request.status === "Quote Sent").length;
@@ -917,17 +902,37 @@ export function RequestsPage({
           { label: "Lost", value: String(lostRequests), detail: "Status from request workflow", tone: "red", icon: Bell },
         ]}
       />
-      <Card title="Request Pipeline" action="Add request">
+      <Card title="Request Pipeline" action="Create quotes from requests">
         <div className="grid gap-3 p-4 lg:grid-cols-5">
           {stages.map((stage) => (
             <div key={stage} className="rounded-none border border-stone-200 bg-stone-50 p-3">
               <p className="text-sm font-semibold text-stone-950">{stage}</p>
               <div className="mt-3 space-y-2">
                 {allRequests.filter((request) => request.status === stage).map((request) => (
-                  <div key={request.name} className="rounded-none bg-white p-3 shadow-sm">
+                  <div key={request.id ?? `${request.name}-${request.date}`} className="rounded-none bg-white p-3 shadow-sm">
                     <p className="text-sm font-semibold text-stone-950">{request.name}</p>
                     <p className="text-xs text-stone-500">{request.service}</p>
-                    <p className="mt-2 text-xs font-semibold text-emerald-700">{money.format(request.value)}</p>
+                    <p className="mt-2 text-xs font-semibold text-emerald-700">
+                      {request.value > 0 ? money.format(request.value) : "Price not set"}
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {request.email ? (
+                        <a
+                          href={`mailto:${request.email}`}
+                          className="inline-flex items-center gap-1 rounded-none border border-stone-200 px-2 py-1 text-xs font-semibold text-stone-700 hover:bg-stone-50"
+                        >
+                          <Mail size={12} aria-hidden="true" />
+                          Email
+                        </a>
+                      ) : null}
+                      <a
+                        href="#requests-table"
+                        className="inline-flex items-center gap-1 rounded-none bg-emerald-800 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-900"
+                      >
+                        <FileText size={12} aria-hidden="true" />
+                        Quote
+                      </a>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -935,24 +940,95 @@ export function RequestsPage({
           ))}
         </div>
       </Card>
+      <Card title="Send Email From Request" action="Uses Resend">
+        <form action="/api/dashboard/email" method="post" className="grid gap-3 p-4 lg:grid-cols-[0.8fr_1fr]">
+          <div className="space-y-3">
+            <label className="grid gap-1 text-sm font-semibold text-stone-700">
+              Request
+              <select
+                value={selectedEmailRequest?.id ?? ""}
+                onChange={(event) => setSelectedRequestId(event.target.value)}
+                className="rounded-none border border-stone-200 bg-white px-3 py-2 text-sm font-normal text-stone-600"
+              >
+                {requestOptions.length ? (
+                  requestOptions.map((request) => (
+                    <option key={request.id ?? request.email} value={request.id ?? ""}>
+                      {request.name} - {request.email}
+                    </option>
+                  ))
+                ) : (
+                  <option value="">No request emails available</option>
+                )}
+              </select>
+            </label>
+            <input type="hidden" name="to" value={selectedEmailRequest?.email ?? ""} />
+            <input type="hidden" name="quote_request_id" value={selectedEmailRequest?.id ?? ""} />
+            <label className="grid gap-1 text-sm font-semibold text-stone-700">
+              Subject
+              <input
+                name="subject"
+                defaultValue="Stornway quote request"
+                className="rounded-none border border-stone-200 px-3 py-2 text-sm font-normal text-stone-600"
+              />
+            </label>
+          </div>
+          <div className="grid gap-3">
+            <label className="grid gap-1 text-sm font-semibold text-stone-700">
+              Message
+              <textarea
+                name="message"
+                rows={5}
+                defaultValue={`Hi ${selectedEmailRequest?.name ?? ""},\n\nThanks for reaching out to Stornway Group. We can help with ${selectedEmailRequest?.service ?? "your request"}. Reply here with any details you want us to include in the quote.\n\nStornway Group`}
+                className="rounded-none border border-stone-200 px-3 py-2 text-sm font-normal text-stone-600"
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={!selectedEmailRequest?.email}
+              className="inline-flex w-fit items-center gap-2 rounded-none bg-emerald-800 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-900 disabled:cursor-not-allowed disabled:bg-stone-300"
+            >
+              <Send size={16} aria-hidden="true" />
+              Send email
+            </button>
+          </div>
+        </form>
+      </Card>
       <div className="grid gap-4 xl:grid-cols-[1.4fr_0.8fr]">
-        <Card title="Requests Table" action="Export">
+        <Card title="Requests Table" action="Create quote">
           <div className="overflow-x-auto">
-            <table className="min-w-[760px] w-full text-left text-sm">
+            <table id="requests-table" className="min-w-[980px] w-full text-left text-sm">
               <thead className="text-xs uppercase tracking-[0.08em] text-stone-400">
-                <tr>{["Name", "Service Requested", "Address", "Date", "Lead Source", "Status"].map((head) => <th key={head} className="px-4 py-3 font-semibold">{head}</th>)}</tr>
+                <tr>{["Name", "Contact", "Service Requested", "Date", "Lead Source", "Status", "Actions"].map((head) => <th key={head} className="px-4 py-3 font-semibold">{head}</th>)}</tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
                 {allRequests.map((request) => (
-                  <tr key={request.name}>
+                  <tr key={request.id ?? `${request.name}-${request.date}`} className="align-top">
                     <td className="px-4 py-3 font-semibold">{request.name}</td>
+                    <td className="px-4 py-3 text-stone-600">
+                      <p>{request.email || "No email"}</p>
+                      <p className="text-xs">{request.phone || "No phone"}</p>
+                    </td>
                     <td className="px-4 py-3 text-stone-600">{request.service}</td>
-                    <td className="px-4 py-3 text-stone-600">{request.address}</td>
                     <td className="px-4 py-3 text-stone-600">{request.date}</td>
                     <td className="px-4 py-3 text-stone-600">{request.source}</td>
                     <td className="px-4 py-3"><Badge tone={statusTone(request.status)}>{request.status}</Badge></td>
+                    <td className="px-4 py-3">
+                      <details className="w-[280px] rounded-none border border-stone-200 bg-white">
+                        <summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-emerald-800">
+                          Create quote
+                        </summary>
+                        <RequestQuoteForm request={request} />
+                      </details>
+                    </td>
                   </tr>
                 ))}
+                {allRequests.length === 0 ? (
+                  <tr>
+                    <td className="px-4 py-5 text-sm text-stone-500" colSpan={7}>
+                      No requests found in Supabase yet.
+                    </td>
+                  </tr>
+                ) : null}
               </tbody>
             </table>
           </div>
@@ -963,6 +1039,48 @@ export function RequestsPage({
       </div>
       <EmptyState label="No incoming requests in this source or status. New website form submissions will appear here." />
     </PageShell>
+  );
+}
+
+function RequestQuoteForm({ request }: { request: DashboardRequest }) {
+  return (
+    <form action="/api/dashboard/quotes" method="post" className="grid gap-2 border-t border-stone-200 p-3">
+      <input type="hidden" name="quote_request_id" value={request.id ?? ""} />
+      <input type="hidden" name="client_name" value={request.name} />
+      <input type="hidden" name="client_email" value={request.email ?? ""} />
+      <input type="hidden" name="client_phone" value={request.phone ?? ""} />
+      <input type="hidden" name="service_type" value={request.service} />
+      <label className="grid gap-1 text-xs font-semibold text-stone-700">
+        Address
+        <input name="client_address" defaultValue="" placeholder="Client address" className="rounded-none border border-stone-200 px-2 py-1.5 font-normal text-stone-600" />
+      </label>
+      <label className="grid gap-1 text-xs font-semibold text-stone-700">
+        Product/service
+        <input name="product_service" defaultValue={request.service} className="rounded-none border border-stone-200 px-2 py-1.5 font-normal text-stone-600" />
+      </label>
+      <label className="grid gap-1 text-xs font-semibold text-stone-700">
+        Description
+        <textarea name="description" rows={3} defaultValue={request.message ?? ""} className="rounded-none border border-stone-200 px-2 py-1.5 font-normal text-stone-600" />
+      </label>
+      <div className="grid grid-cols-2 gap-2">
+        <label className="grid gap-1 text-xs font-semibold text-stone-700">
+          Qty.
+          <input name="quantity" type="number" min="1" step="1" defaultValue="1" className="rounded-none border border-stone-200 px-2 py-1.5 font-normal text-stone-600" />
+        </label>
+        <label className="grid gap-1 text-xs font-semibold text-stone-700">
+          Unit price
+          <input name="unit_price" type="number" min="0" step="0.01" placeholder="0.00" className="rounded-none border border-stone-200 px-2 py-1.5 font-normal text-stone-600" />
+        </label>
+      </div>
+      <label className="flex items-center gap-2 text-xs font-semibold text-stone-700">
+        <input name="send_email" type="checkbox" className="size-4 accent-emerald-800" />
+        Send quote email
+      </label>
+      <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-none bg-emerald-800 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-900">
+        <FileText size={14} aria-hidden="true" />
+        Create quote
+      </button>
+    </form>
   );
 }
 
@@ -1081,7 +1199,9 @@ function QuoteDocumentPreview({
         </div>
 
         <p className="mt-[440px] text-base">
-          This quote is valid for the next 30 days, after which values may be subject to change.
+          {documentType === "Invoice"
+            ? "Payment is due by the date shown above. Please contact Stornway Group with any questions."
+            : "This quote is valid for the next 30 days, after which values may be subject to change."}
         </p>
       </div>
     </div>
@@ -1108,7 +1228,7 @@ function QuoteDeliveryPanel({ rows }: { rows: DashboardQuote[] }) {
   const sendHref = getQuoteSendHref(selectedQuote, channel);
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[0.82fr_1.18fr]">
+    <div id="quote-delivery" className="grid gap-4 xl:grid-cols-[0.82fr_1.18fr]">
       <Card title="Send quote / generate invoice" action="Connected next: quotes table">
         <div className="space-y-4 p-4">
           <label className="grid gap-1 text-sm font-semibold text-stone-700">
@@ -1316,6 +1436,101 @@ export function JobsPage({ liveJobs = [] }: { liveJobs?: DashboardJob[] }) {
   );
 }
 
+function InvoiceCreator() {
+  const [clientName, setClientName] = useState("");
+  const [clientEmail, setClientEmail] = useState("");
+  const [clientPhone, setClientPhone] = useState("");
+  const [clientAddress, setClientAddress] = useState("");
+  const [productService, setProductService] = useState("Exterior service");
+  const [description, setDescription] = useState("Exterior cleaning service.");
+  const [quantity, setQuantity] = useState(1);
+  const [unitPrice, setUnitPrice] = useState(0);
+  const [dueAt, setDueAt] = useState("");
+  const previewQuote: Quote = {
+    client: clientName || "Client name",
+    email: clientEmail,
+    phone: clientPhone || "Phone to confirm",
+    address: clientAddress || "Client address, Montreal, QC",
+    number: "INV-Preview",
+    service: productService,
+    value: quantity * unitPrice,
+    created: new Intl.DateTimeFormat("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    }).format(new Date()),
+    status: "Draft",
+    lineItems: [
+      {
+        product: productService || "Service",
+        description: description || "Service description",
+        quantity,
+        unitPrice,
+      },
+    ],
+  };
+
+  return (
+    <div id="invoice-creator" className="grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
+      <Card title="Invoice Creator" action="Writes to invoices table">
+        <form action="/api/dashboard/invoices" method="post" className="grid gap-3 p-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="grid gap-1 text-sm font-semibold text-stone-700">
+              Client name
+              <input name="client_name" value={clientName} onChange={(event) => setClientName(event.target.value)} className="rounded-none border border-stone-200 px-3 py-2 text-sm font-normal text-stone-600" />
+            </label>
+            <label className="grid gap-1 text-sm font-semibold text-stone-700">
+              Email
+              <input name="client_email" type="email" value={clientEmail} onChange={(event) => setClientEmail(event.target.value)} className="rounded-none border border-stone-200 px-3 py-2 text-sm font-normal text-stone-600" />
+            </label>
+            <label className="grid gap-1 text-sm font-semibold text-stone-700">
+              Phone
+              <input name="client_phone" value={clientPhone} onChange={(event) => setClientPhone(event.target.value)} className="rounded-none border border-stone-200 px-3 py-2 text-sm font-normal text-stone-600" />
+            </label>
+            <label className="grid gap-1 text-sm font-semibold text-stone-700">
+              Due date
+              <input name="due_at" type="date" value={dueAt} onChange={(event) => setDueAt(event.target.value)} className="rounded-none border border-stone-200 px-3 py-2 text-sm font-normal text-stone-600" />
+            </label>
+          </div>
+          <label className="grid gap-1 text-sm font-semibold text-stone-700">
+            Address
+            <input name="client_address" value={clientAddress} onChange={(event) => setClientAddress(event.target.value)} className="rounded-none border border-stone-200 px-3 py-2 text-sm font-normal text-stone-600" />
+          </label>
+          <label className="grid gap-1 text-sm font-semibold text-stone-700">
+            Product/service
+            <input name="product_service" value={productService} onChange={(event) => setProductService(event.target.value)} className="rounded-none border border-stone-200 px-3 py-2 text-sm font-normal text-stone-600" />
+          </label>
+          <label className="grid gap-1 text-sm font-semibold text-stone-700">
+            Description
+            <textarea name="description" rows={4} value={description} onChange={(event) => setDescription(event.target.value)} className="rounded-none border border-stone-200 px-3 py-2 text-sm font-normal text-stone-600" />
+          </label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="grid gap-1 text-sm font-semibold text-stone-700">
+              Qty.
+              <input name="quantity" type="number" min="1" step="1" value={quantity} onChange={(event) => setQuantity(Number(event.target.value) || 1)} className="rounded-none border border-stone-200 px-3 py-2 text-sm font-normal text-stone-600" />
+            </label>
+            <label className="grid gap-1 text-sm font-semibold text-stone-700">
+              Unit price
+              <input name="unit_price" type="number" min="0" step="0.01" value={unitPrice} onChange={(event) => setUnitPrice(Number(event.target.value) || 0)} className="rounded-none border border-stone-200 px-3 py-2 text-sm font-normal text-stone-600" />
+            </label>
+          </div>
+          <label className="flex items-center gap-2 text-sm font-semibold text-stone-700">
+            <input name="send_email" type="checkbox" className="size-4 accent-emerald-800" />
+            Send invoice email
+          </label>
+          <button type="submit" className="inline-flex w-fit items-center gap-2 rounded-none bg-emerald-800 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-900">
+            <ReceiptText size={16} aria-hidden="true" />
+            Create invoice
+          </button>
+        </form>
+      </Card>
+      <Card title="Invoice Preview">
+        <QuoteDocumentPreview quote={previewQuote} documentType="Invoice" />
+      </Card>
+    </div>
+  );
+}
+
 export function InvoicesPage({
   liveInvoices = [],
 }: {
@@ -1343,6 +1558,7 @@ export function InvoicesPage({
           { label: "Average payment time", value: "Not tracked", detail: "Needs payment timestamp", tone: "blue", icon: Clock3 },
         ]}
       />
+      <InvoiceCreator />
       <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
         <Card title="Accounts Receivable Chart"><RevenueChart data={[{ label: "Total", value: invoiceTotal }, { label: "Paid", value: invoicePaid }, { label: "Balance", value: outstanding }]} /></Card>
         <Card title="Payment Status Breakdown">

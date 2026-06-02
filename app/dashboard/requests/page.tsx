@@ -32,13 +32,17 @@ export default async function Page() {
   try {
     const quoteRequests = await getQuoteRequests();
     liveRequests = quoteRequests.map((request) => ({
+      id: request.id,
       name: request.name,
+      email: request.email,
+      phone: request.phone,
+      message: request.message,
       service: formatServices(request.services),
       address: "Address to confirm",
       date: formatDate(request.created_at),
       source: "Website",
       status: request.email_sent ? "Contacted" : "New",
-      value: request.services.includes("landscaping") ? 950 : 640,
+      value: 0,
     }));
   } catch (error) {
     console.error("[dashboard/requests] Failed to load Supabase requests:", error);
