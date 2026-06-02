@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { Fragment, useMemo, useState, type ReactNode } from "react";
 import type {
   DashboardCustomer,
   DashboardInvoice,
@@ -14,11 +14,9 @@ import {
   Bell,
   CalendarDays,
   CheckCircle2,
-  ChevronDown,
   CircleDollarSign,
   ClipboardList,
   Clock3,
-  CreditCard,
   Download,
   Eye,
   FileCheck2,
@@ -29,16 +27,12 @@ import {
   Inbox,
   LayoutDashboard,
   Mail,
-  Map,
   MapPin,
-  MoreHorizontal,
   Phone,
   Plus,
   ReceiptText,
-  Route,
   Search,
   Send,
-  Settings,
   Sparkles,
   Smartphone,
   TrendingUp,
@@ -59,6 +53,12 @@ type Kpi = {
 
 type QuoteLineItem = DashboardQuoteLineItem;
 type Quote = DashboardQuote;
+type ConversionCounts = {
+  requests: number;
+  quotes: number;
+  jobs: number;
+  invoices: number;
+};
 
 const money = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -115,6 +115,21 @@ function statusTone(status: string): Tone {
   if (["Viewed", "In Progress"].includes(status)) return "blue";
   if (status === "Quote Sent") return "violet";
   return "stone";
+}
+
+function getLeadSourceSegments(requests: DashboardRequest[]) {
+  const colors = ["#3080ff", "#009767", "#f99c00", "#7008e7", "#79716b"];
+  const counts = new Map<string, number>();
+
+  for (const request of requests) {
+    counts.set(request.source, (counts.get(request.source) ?? 0) + 1);
+  }
+
+  return [...counts.entries()].map(([label, value], index) => ({
+    label,
+    value,
+    color: colors[index % colors.length],
+  }));
 }
 
 function PageShell({
@@ -218,24 +233,31 @@ function PageShell({
 }
 
 function QuickActions() {
-  const actions = ["Create quote", "Create invoice", "Schedule job", "Add client"];
+  const actions = [
+    { label: "Create quote", href: "/dashboard/quotes#quote-delivery" },
+    { label: "Create invoice", href: "/dashboard/invoices" },
+    { label: "Schedule job", href: "/dashboard/schedule" },
+    { label: "Add client", href: "/dashboard/clients" },
+  ];
   return (
     <div className="hidden items-center gap-2 md:flex">
       {actions.slice(0, 2).map((action) => (
         <a
-          key={action}
-          href={action === "Create invoice" ? "/dashboard/invoices" : "/dashboard/quotes"}
+          key={action.label}
+          href={action.href}
           className="inline-flex items-center gap-2 rounded-none border border-stone-200 bg-white px-3 py-2 text-sm font-semibold text-stone-800 hover:bg-stone-100"
         >
           <Plus size={16} aria-hidden="true" />
-          {action}
+          {action.label}
         </a>
       ))}
-      <button className="inline-flex items-center gap-2 rounded-none bg-emerald-800 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-900">
+      <a
+        href="/dashboard/requests"
+        className="inline-flex items-center gap-2 rounded-none bg-emerald-800 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-900"
+      >
         <Sparkles size={16} aria-hidden="true" />
-        Quick Actions
-        <ChevronDown size={15} aria-hidden="true" />
-      </button>
+        Review leads
+      </a>
     </div>
   );
 }
@@ -378,6 +400,14 @@ function PieChart({
 }) {
   let cursor = 0;
   const total = segments.reduce((sum, item) => sum + item.value, 0);
+  if (segments.length === 0 || total === 0) {
+    return (
+      <div className="p-4 text-sm text-stone-500">
+        No Supabase rows available for this breakdown yet.
+      </div>
+    );
+  }
+
   const gradient = segments
     .map((item) => {
       const start = cursor;
@@ -405,14 +435,17 @@ function PieChart({
 }
 
 function Funnel({ steps }: { steps: { label: string; value: number }[] }) {
-  const first = Math.max(steps[0]?.value ?? 0, 1);
+  const rawFirst = steps[0]?.value ?? 0;
+  const first = Math.max(rawFirst, 1);
   return (
     <div className="grid gap-3 p-4 sm:grid-cols-4">
       {steps.map((step, index) => (
         <div key={step.label} className="rounded-none border border-stone-200 bg-stone-50 p-3">
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-stone-400">{step.label}</p>
           <p className="mt-2 text-2xl font-semibold text-stone-950">{step.value}</p>
-          <p className="mt-1 text-xs text-stone-500">{Math.round((step.value / first) * 100)}% of requests</p>
+          <p className="mt-1 text-xs text-stone-500">
+            {rawFirst === 0 ? "No source rows yet" : `${Math.round((step.value / first) * 100)}% of first step`}
+          </p>
           {index < steps.length - 1 ? <div className="mt-3 h-1 rounded-none bg-emerald-700" /> : null}
         </div>
       ))}
@@ -420,26 +453,78 @@ function Funnel({ steps }: { steps: { label: string; value: number }[] }) {
   );
 }
 
-function HeatMap() {
-  const points = [
-    ["left-[18%] top-[45%] size-16 bg-red-500/70"],
-    ["left-[30%] top-[38%] size-12 bg-orange-400/65"],
-    ["left-[46%] top-[50%] size-20 bg-red-500/70"],
-    ["left-[60%] top-[42%] size-14 bg-amber-400/70"],
-    ["left-[73%] top-[56%] size-12 bg-emerald-400/60"],
-    ["left-[38%] top-[64%] size-10 bg-emerald-400/60"],
-  ];
-  return (
-    <div className="p-4">
-      <div className="relative h-56 overflow-hidden rounded-none border border-stone-200 bg-[linear-gradient(135deg,#dbeafe_0_22%,#ecfdf5_22%_48%,#fef3c7_48%_64%,#e0f2fe_64%)]">
-        <div className="absolute inset-0 opacity-50 [background-image:linear-gradient(#fff_1px,transparent_1px),linear-gradient(90deg,#fff_1px,transparent_1px)] [background-size:34px_34px]" />
-        {points.map(([classes], index) => (
-          <span key={index} className={`absolute rounded-none blur-lg ${classes}`} />
-        ))}
-        <span className="absolute bottom-3 left-3 rounded-none bg-white/90 px-3 py-2 text-xs font-semibold text-stone-700 shadow-sm">
-          Revenue concentration by completed jobs
-        </span>
+function getAreaFromJob(job: DashboardJob) {
+  const parts = job.address.split(",").map((part) => part.trim()).filter(Boolean);
+  return parts[1] || parts[0] || "Unassigned";
+}
+
+function heatColor(value: number, max: number) {
+  if (max <= 0 || value <= 0) return "rgba(245, 245, 244, 1)";
+  const intensity = value / max;
+  if (intensity > 0.8) return "rgba(0, 82, 59, 0.92)";
+  if (intensity > 0.6) return "rgba(0, 121, 86, 0.78)";
+  if (intensity > 0.4) return "rgba(77, 154, 98, 0.58)";
+  if (intensity > 0.2) return "rgba(186, 164, 103, 0.52)";
+  return "rgba(225, 211, 175, 0.75)";
+}
+
+function RevenueHeatMap({ jobs }: { jobs: DashboardJob[] }) {
+  const services = Array.from(new Set(jobs.map((job) => job.service).filter(Boolean))).sort();
+  const areas = Array.from(new Set(jobs.map(getAreaFromJob))).sort();
+  const values = new Map<string, number>();
+
+  for (const job of jobs) {
+    const key = `${getAreaFromJob(job)}|${job.service}`;
+    values.set(key, (values.get(key) ?? 0) + job.revenue);
+  }
+
+  const max = Math.max(...values.values(), 0);
+
+  if (jobs.length === 0 || services.length === 0 || areas.length === 0) {
+    return (
+      <div className="p-4 text-sm text-stone-500">
+        No job revenue rows are available for a heatmap yet.
       </div>
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto p-4">
+      <div
+        className="grid min-w-[680px] gap-px rounded-none border border-stone-200 bg-stone-200 text-xs"
+        style={{ gridTemplateColumns: `150px repeat(${services.length}, minmax(110px, 1fr))` }}
+      >
+        <div className="bg-white p-2 font-semibold text-stone-500">Area / service</div>
+        {services.map((service) => (
+          <div key={service} className="bg-white p-2 font-semibold text-stone-700">
+            {service}
+          </div>
+        ))}
+        {areas.map((area) => (
+          <Fragment key={area}>
+            <div key={`${area}-label`} className="bg-white p-2 font-semibold text-stone-700">
+              {area}
+            </div>
+            {services.map((service) => {
+              const value = values.get(`${area}|${service}`) ?? 0;
+              const isDark = value / Math.max(max, 1) > 0.55;
+              return (
+                <div
+                  key={`${area}-${service}`}
+                  className={`min-h-16 p-2 ${isDark ? "text-white" : "text-stone-700"}`}
+                  style={{ backgroundColor: heatColor(value, max) }}
+                  title={`${area} / ${service}: ${money.format(value)}`}
+                >
+                  <span className="font-semibold">{value > 0 ? money.format(value) : "-"}</span>
+                </div>
+              );
+            })}
+          </Fragment>
+        ))}
+      </div>
+      <p className="mt-3 text-xs text-stone-500">
+        Intensity is calculated from Supabase job revenue by area and service.
+      </p>
     </div>
   );
 }
@@ -559,11 +644,13 @@ export function HomeDashboardPage({
   liveJobs = [],
   liveQuotes = [],
   liveInvoices = [],
+  liveRequestCount = 0,
 }: {
   liveCustomers?: DashboardCustomer[];
   liveJobs?: DashboardJob[];
   liveQuotes?: DashboardQuote[];
   liveInvoices?: DashboardInvoice[];
+  liveRequestCount?: number;
 }) {
   const dashboardCustomers = liveCustomers;
   const dashboardJobs = liveJobs;
@@ -576,6 +663,18 @@ export function HomeDashboardPage({
   const acceptedQuoteTotal = dashboardQuotes
     .filter((quote) => quote.status === "Accepted")
     .reduce((sum, quote) => sum + quote.value, 0);
+  const homeConversionCounts: ConversionCounts = {
+    requests: liveRequestCount,
+    quotes: dashboardQuotes.length,
+    jobs: dashboardJobs.length,
+    invoices: dashboardInvoices.length,
+  };
+  const homeActions = [
+    { label: "Create quote", href: "/dashboard/quotes#quote-delivery" },
+    { label: "Create invoice", href: "/dashboard/invoices" },
+    { label: "Schedule job", href: "/dashboard/schedule" },
+    { label: "Add client", href: "/dashboard/clients" },
+  ];
 
   return (
     <PageShell active="Home" eyebrow="Stornway dashboard" title="Good afternoon, Stornway">
@@ -595,10 +694,14 @@ export function HomeDashboardPage({
           <Card title="Today's Schedule" action="Open schedule"><ScheduleWidget rows={dashboardJobs} /></Card>
           <Card title="Quick Actions">
             <div className="grid gap-2 p-4 sm:grid-cols-2">
-              {["Create quote", "Create invoice", "Schedule job", "Add client"].map((action) => (
-                <button key={action} className="inline-flex items-center justify-center gap-2 rounded-none border border-stone-200 bg-white px-3 py-3 text-sm font-semibold text-stone-800 hover:bg-stone-100">
-                  <Plus size={16} aria-hidden="true" />{action}
-                </button>
+              {homeActions.map((action) => (
+                <a
+                  key={action.label}
+                  href={action.href}
+                  className="inline-flex items-center justify-center gap-2 rounded-none border border-stone-200 bg-white px-3 py-3 text-sm font-semibold text-stone-800 hover:bg-stone-100"
+                >
+                  <Plus size={16} aria-hidden="true" />{action.label}
+                </a>
               ))}
             </div>
           </Card>
@@ -606,8 +709,8 @@ export function HomeDashboardPage({
       </div>
       <div className="grid gap-4 xl:grid-cols-3">
         <Card title="Revenue Chart" action="Export"><RevenueChart /></Card>
-        <Card title="Lead Conversion Widget"><Funnel steps={[{ label: "Requests", value: 42 }, { label: "Quotes", value: 28 }, { label: "Jobs", value: 18 }, { label: "Paid", value: 14 }]} /></Card>
-        <Card title="Revenue Heat Map" action="Open map"><HeatMap /></Card>
+        <Card title="Lead Conversion Widget"><Funnel steps={[{ label: "Requests", value: homeConversionCounts.requests }, { label: "Quotes", value: homeConversionCounts.quotes }, { label: "Jobs", value: homeConversionCounts.jobs }, { label: "Invoices", value: homeConversionCounts.invoices }]} /></Card>
+        <Card title="Revenue Heat Map" action="Open map"><RevenueHeatMap jobs={dashboardJobs} /></Card>
       </div>
       <EmptyState label="If no jobs match the active filters, this area explains how to clear filters or create a new job." />
     </PageShell>
@@ -625,7 +728,7 @@ export function SchedulePage({ liveJobs = [] }: { liveJobs?: DashboardJob[] }) {
           { label: "Jobs", value: String(pageJobs.length), detail: "From Supabase jobs", tone: "blue", icon: CalendarDays },
           { label: "Revenue scheduled", value: money.format(revenue), detail: "Booked route value", tone: "emerald", icon: CircleDollarSign },
           { label: "Unassigned crew", value: String(pageJobs.filter((job) => job.crew === "Unassigned").length), detail: "Needs dispatch", tone: "violet", icon: Clock3 },
-          { label: "Open time slots", value: "Manual", detail: "Crew availability not stored yet", tone: "amber", icon: Gauge },
+          { label: "Open time slots", value: "Not tracked", detail: "Crew availability table not connected yet", tone: "amber", icon: Gauge },
         ]}
       />
       <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
@@ -795,14 +898,23 @@ export function RequestsPage({
 }) {
   const stages = ["New", "Contacted", "Quote Sent", "Won", "Lost"];
   const allRequests = liveRequests;
+  const newRequests = allRequests.filter((request) => request.status === "New").length;
+  const contactedRequests = allRequests.filter((request) => request.status === "Contacted").length;
+  const quotedRequests = allRequests.filter((request) => request.status === "Quote Sent").length;
+  const lostRequests = allRequests.filter((request) => request.status === "Lost").length;
+  const quotedValue = allRequests
+    .filter((request) => request.status === "Quote Sent")
+    .reduce((sum, request) => sum + request.value, 0);
+  const leadSourceSegments = getLeadSourceSegments(allRequests);
+
   return (
     <PageShell active="Requests" eyebrow="Lead inbox" title="Requests">
       <KpiGrid
         items={[
-          { label: "New requests", value: "12", detail: "5 this week", tone: "blue", icon: Inbox },
-          { label: "Contacted", value: "18", detail: "Median response 2h", tone: "amber", icon: Phone },
-          { label: "Quoted", value: "27", detail: "$18,400 proposed", tone: "violet", icon: FileText },
-          { label: "Lost", value: "6", detail: "Mostly price objections", tone: "red", icon: Bell },
+          { label: "New requests", value: String(newRequests), detail: "From Supabase quote_requests", tone: "blue", icon: Inbox },
+          { label: "Contacted", value: String(contactedRequests), detail: "email_sent marked true", tone: "amber", icon: Phone },
+          { label: "Quoted", value: String(quotedRequests), detail: `${money.format(quotedValue)} proposed`, tone: "violet", icon: FileText },
+          { label: "Lost", value: String(lostRequests), detail: "Status from request workflow", tone: "red", icon: Bell },
         ]}
       />
       <Card title="Request Pipeline" action="Add request">
@@ -846,13 +958,7 @@ export function RequestsPage({
           </div>
         </Card>
         <Card title="Lead Source Breakdown">
-          <PieChart title="Lead sources" segments={[
-            { label: "Website", value: 42, color: "#3080ff" },
-            { label: "Referral", value: 16, color: "#009767" },
-            { label: "Google", value: 26, color: "#f99c00" },
-            { label: "Facebook", value: 10, color: "#7008e7" },
-            { label: "Direct Call", value: 6, color: "#79716b" },
-          ]} />
+          <PieChart title="Lead sources" segments={leadSourceSegments} />
         </Card>
       </div>
       <EmptyState label="No incoming requests in this source or status. New website form submissions will appear here." />
@@ -905,7 +1011,7 @@ function QuoteDocumentPreview({
             <div className="mt-2 border-t-2 border-[#556052] pt-3">
               <p className="text-xs font-extrabold uppercase text-[#2a2a2a]">{sentLabel}</p>
               <p className="mt-4 border-b border-stone-300 pb-2 text-base font-semibold text-stone-500">
-                June 1, 2026
+                {quote.created}
               </p>
             </div>
           </div>
@@ -1154,6 +1260,11 @@ export function QuotesPage({ liveQuotes = [] }: { liveQuotes?: DashboardQuote[] 
 export function JobsPage({ liveJobs = [] }: { liveJobs?: DashboardJob[] }) {
   const pageJobs = liveJobs;
   const revenue = pageJobs.reduce((sum, job) => sum + job.revenue, 0);
+  const jobStatusSegments = ["Scheduled", "In Progress", "Pending", "Completed", "Delayed"].map((status, index) => ({
+    label: status,
+    value: pageJobs.filter((job) => job.status === status).length,
+    color: ["#3080ff", "#f99c00", "#baa467", "#009767", "#bf000f"][index],
+  }));
 
   return (
     <PageShell active="Jobs" eyebrow="Work management" title="Jobs">
@@ -1167,12 +1278,7 @@ export function JobsPage({ liveJobs = [] }: { liveJobs?: DashboardJob[] }) {
       />
       <div className="grid gap-4 xl:grid-cols-[0.8fr_1.2fr]">
         <Card title="Job Status Breakdown">
-          <PieChart title="Job status" segments={[
-            { label: "Scheduled", value: 14, color: "#3080ff" },
-            { label: "In Progress", value: 6, color: "#f99c00" },
-            { label: "Completed", value: 23, color: "#009767" },
-            { label: "Delayed", value: 3, color: "#bf000f" },
-          ]} />
+          <PieChart title="Job status" segments={jobStatusSegments} />
         </Card>
         <Card title="Map View"><MapPreview title="Upcoming Jobs Map" rows={pageJobs} /></Card>
       </div>
@@ -1219,6 +1325,13 @@ export function InvoicesPage({
   const outstanding = pageInvoices.reduce((sum, invoice) => sum + invoice.balance, 0);
   const paidCount = pageInvoices.filter((invoice) => invoice.status === "Paid").length;
   const overdueCount = pageInvoices.filter((invoice) => invoice.status === "Overdue").length;
+  const invoiceTotal = pageInvoices.reduce((sum, invoice) => sum + invoice.amount, 0);
+  const invoicePaid = pageInvoices.reduce((sum, invoice) => sum + invoice.paid, 0);
+  const invoiceStatusSegments = ["Paid", "Pending", "Overdue", "Sent", "Draft"].map((status, index) => ({
+    label: status,
+    value: pageInvoices.filter((invoice) => invoice.status === status).length,
+    color: ["#009767", "#f99c00", "#bf000f", "#3080ff", "#79716b"][index],
+  }));
 
   return (
     <PageShell active="Invoices" eyebrow="Payments" title="Invoices">
@@ -1227,17 +1340,13 @@ export function InvoicesPage({
           { label: "Outstanding balance", value: money.format(outstanding), detail: `${pageInvoices.length} invoices in Supabase`, tone: "orange", icon: WalletCards },
           { label: "Paid invoices", value: String(paidCount), detail: "Status = paid", tone: "emerald", icon: CheckCircle2 },
           { label: "Overdue invoices", value: String(overdueCount), detail: "Status = overdue", tone: "red", icon: Bell },
-          { label: "Average payment time", value: "TBD", detail: "Needs payment timestamp", tone: "blue", icon: Clock3 },
+          { label: "Average payment time", value: "Not tracked", detail: "Needs payment timestamp", tone: "blue", icon: Clock3 },
         ]}
       />
       <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-        <Card title="Accounts Receivable Chart"><RevenueChart data={[{ label: "Jan", value: 6800 }, { label: "Feb", value: 7200 }, { label: "Mar", value: 8400 }, { label: "Apr", value: 9100 }, { label: "May", value: 10600 }, { label: "Jun", value: 6540 }]} /></Card>
+        <Card title="Accounts Receivable Chart"><RevenueChart data={[{ label: "Total", value: invoiceTotal }, { label: "Paid", value: invoicePaid }, { label: "Balance", value: outstanding }]} /></Card>
         <Card title="Payment Status Breakdown">
-          <PieChart title="Payment status" segments={[
-            { label: "Paid", value: 18, color: "#009767" },
-            { label: "Pending", value: 7, color: "#f99c00" },
-            { label: "Overdue", value: 3, color: "#bf000f" },
-          ]} />
+          <PieChart title="Payment status" segments={invoiceStatusSegments} />
         </Card>
       </div>
       <Card title="Invoice Table" action="Create invoice">
@@ -1302,7 +1411,7 @@ export function InsightsPage({
     <PageShell active="Insights" eyebrow="Business intelligence" title="Insights">
       <KpiGrid
         items={[
-          { label: "Repeat customer rate", value: "TBD", detail: "Requires repeat completed jobs", tone: "emerald", icon: Users },
+          { label: "Repeat customer rate", value: "Not tracked", detail: "Requires repeat completed jobs", tone: "emerald", icon: Users },
           { label: "Average customer value", value: liveCustomers.length ? money.format(Math.round(paidRevenue / liveCustomers.length)) : "$0", detail: "Paid invoices / clients", tone: "blue", icon: BadgeDollarSign },
           { label: "Completed job revenue", value: money.format(completedRevenue), detail: "Supabase jobs", tone: "violet", icon: TrendingUp },
           { label: "Forecast next month", value: money.format(liveAcceptedForecast + recurringForecast), detail: "Accepted + recurring", tone: "emerald", icon: BarChart3 },
@@ -1323,7 +1432,7 @@ export function InsightsPage({
             <p className="mt-1">Invoices become actual revenue once issued and paid.</p>
           </div>
           <div className="rounded-none border border-stone-200 bg-stone-50 p-3">
-            <p className="font-semibold text-stone-950">Manual adjustments</p>
+            <p className="font-semibold text-stone-950">Adjustments</p>
             <p className="mt-1">Only use for seasonality or known recurring work that has no quote yet.</p>
           </div>
         </div>
@@ -1334,7 +1443,7 @@ export function InsightsPage({
         <Card title="Revenue by Client"><BarChart data={liveCustomers.slice(0, 5).map((client) => ({ label: client.name, value: client.lifetime }))} /></Card>
       </div>
       <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
-        <Card title="Revenue Heat Map"><HeatMap /></Card>
+        <Card title="Revenue Heat Map"><RevenueHeatMap jobs={liveJobs} /></Card>
         <Card title="Lead Conversion Analytics"><Funnel steps={[{ label: "Clients", value: liveCustomers.length }, { label: "Quotes", value: liveQuotes.length }, { label: "Jobs", value: liveJobs.length }, { label: "Invoices", value: liveInvoices.length }]} /></Card>
       </div>
       <div className="grid gap-4 xl:grid-cols-3">
@@ -1360,7 +1469,7 @@ export function InsightsPage({
             {[
               ["Accepted quotes", liveAcceptedForecast],
               ["Recurring customers", recurringForecast],
-              ["Manual adjustments", 0],
+              ["Adjustments", 0],
             ].map(([label, value]) => (
               <div key={label} className="rounded-none border border-stone-200 p-3">
                 <p className="text-sm font-semibold text-stone-950">{label}</p>
