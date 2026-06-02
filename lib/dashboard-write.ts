@@ -8,7 +8,7 @@ type ClientInput = {
   address: string;
 };
 
-type LineItemInput = {
+export type LineItemInput = {
   productService: string;
   description: string;
   quantity: number;
@@ -81,6 +81,33 @@ export function getLineItemFromForm(formData: FormData): LineItemInput {
   };
 }
 
+function formValues(formData: FormData, key: string) {
+  return formData
+    .getAll(key)
+    .map((value) => (typeof value === "string" ? value.trim() : ""));
+}
+
+export function getLineItemsFromForm(formData: FormData): LineItemInput[] {
+  const products = formValues(formData, "product_service");
+  const descriptions = formValues(formData, "description");
+  const quantities = formValues(formData, "quantity");
+  const unitPrices = formValues(formData, "unit_price");
+  const rowCount = Math.max(
+    products.length,
+    descriptions.length,
+    quantities.length,
+    unitPrices.length,
+  );
+  const lineItems = Array.from({ length: rowCount }, (_, index) => ({
+    productService: products[index] || "",
+    description: descriptions[index] || "",
+    quantity: Number(quantities[index]) || 1,
+    unitPrice: Number(unitPrices[index]) || 0,
+  })).filter((item) => item.productService && item.unitPrice > 0);
+
+  return lineItems.length ? lineItems : [getLineItemFromForm(formData)];
+}
+
 export function getClientFromForm(formData: FormData): ClientInput {
   return {
     name: requiredString(formData, "client_name"),
@@ -92,6 +119,10 @@ export function getClientFromForm(formData: FormData): ClientInput {
 
 export function getTotal(lineItem: LineItemInput) {
   return lineItem.quantity * lineItem.unitPrice;
+}
+
+export function getLineItemsTotal(lineItems: LineItemInput[]) {
+  return lineItems.reduce((total, item) => total + getTotal(item), 0);
 }
 
 export function getOptionalFormString(formData: FormData, key: string) {
@@ -166,11 +197,12 @@ export async function createQuote(input: {
   client: ClientInput;
   quoteRequestId?: string;
   serviceType: string;
-  lineItem: LineItemInput;
+  lineItems: LineItemInput[];
   status?: string;
 }) {
   const client = await ensureClient(input.client);
-  const total = getTotal(input.lineItem);
+  const total = getLineItemsTotal(input.lineItems);
+  const firstLineItem = input.lineItems[0];
 
   const quoteResponse = await supabaseFetch("quotes", {
     method: "POST",
@@ -183,7 +215,7 @@ export async function createQuote(input: {
       client_id: client.id,
       quote_request_id: input.quoteRequestId || null,
       status: input.status ?? "draft",
-      service_type: input.serviceType || input.lineItem.productService,
+      service_type: input.serviceType || firstLineItem.productService,
       subtotal: total,
       total,
       expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
@@ -201,13 +233,16 @@ export async function createQuote(input: {
   const lineResponse = await supabaseFetch("quote_line_items", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      quote_id: quote.id,
-      product_service: input.lineItem.productService,
-      description: input.lineItem.description,
-      quantity: input.lineItem.quantity,
-      unit_price: input.lineItem.unitPrice,
-    }),
+    body: JSON.stringify(
+      input.lineItems.map((item, index) => ({
+        quote_id: quote.id,
+        product_service: item.productService,
+        description: item.description,
+        quantity: item.quantity,
+        unit_price: item.unitPrice,
+        sort_order: index,
+      })),
+    ),
   });
 
   if (!lineResponse.ok) {
@@ -220,12 +255,12 @@ export async function createQuote(input: {
 export async function createInvoice(input: {
   client: ClientInput;
   quoteId?: string;
-  lineItem: LineItemInput;
+  lineItems: LineItemInput[];
   dueAt?: string;
   status?: "draft" | "sent";
 }) {
   const client = await ensureClient(input.client);
-  const total = getTotal(input.lineItem);
+  const total = getLineItemsTotal(input.lineItems);
 
   const invoiceResponse = await supabaseFetch("invoices", {
     method: "POST",
@@ -253,13 +288,16 @@ export async function createInvoice(input: {
   const lineResponse = await supabaseFetch("invoice_line_items", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      invoice_id: invoice.id,
-      product_service: input.lineItem.productService,
-      description: input.lineItem.description,
-      quantity: input.lineItem.quantity,
-      unit_price: input.lineItem.unitPrice,
-    }),
+    body: JSON.stringify(
+      input.lineItems.map((item, index) => ({
+        invoice_id: invoice.id,
+        product_service: item.productService,
+        description: item.description,
+        quantity: item.quantity,
+        unit_price: item.unitPrice,
+        sort_order: index,
+      })),
+    ),
   });
 
   if (!lineResponse.ok) {

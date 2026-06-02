@@ -36,6 +36,7 @@ import {
   Sparkles,
   Smartphone,
   TrendingUp,
+  Trash2,
   Users,
   WalletCards,
   Wrench,
@@ -53,6 +54,13 @@ type Kpi = {
 
 type QuoteLineItem = DashboardQuoteLineItem;
 type Quote = DashboardQuote;
+type EditableLineItem = {
+  id: string;
+  product: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+};
 type ConversionCounts = {
   requests: number;
   quotes: number;
@@ -880,9 +888,13 @@ export function RequestsPage({
   const allRequests = liveRequests;
   const requestOptions = allRequests.filter((request) => request.email);
   const [selectedRequestId, setSelectedRequestId] = useState(requestOptions[0]?.id ?? "");
+  const [selectedQuoteRequestId, setSelectedQuoteRequestId] = useState(allRequests[0]?.id ?? "");
   const selectedEmailRequest =
     requestOptions.find((request) => request.id === selectedRequestId) ??
     requestOptions[0];
+  const selectedQuoteRequest =
+    allRequests.find((request) => request.id === selectedQuoteRequestId) ??
+    allRequests[0];
   const newRequests = allRequests.filter((request) => request.status === "New").length;
   const contactedRequests = allRequests.filter((request) => request.status === "Contacted").length;
   const quotedRequests = allRequests.filter((request) => request.status === "Quote Sent").length;
@@ -926,7 +938,7 @@ export function RequestsPage({
                         </a>
                       ) : null}
                       <a
-                        href="#requests-table"
+                        href="#request-quote-creator"
                         className="inline-flex items-center gap-1 rounded-none bg-emerald-800 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-900"
                       >
                         <FileText size={12} aria-hidden="true" />
@@ -938,6 +950,45 @@ export function RequestsPage({
               </div>
             </div>
           ))}
+        </div>
+      </Card>
+      <Card title="Create Quote From Request" action="Saves to quotes table">
+        <div id="request-quote-creator" className="grid gap-4 p-4 xl:grid-cols-[0.7fr_1.3fr]">
+          <div className="space-y-3">
+            <label className="grid gap-1 text-sm font-semibold text-stone-700">
+              Request
+              <select
+                value={selectedQuoteRequest?.id ?? ""}
+                onChange={(event) => setSelectedQuoteRequestId(event.target.value)}
+                className="rounded-none border border-stone-200 bg-white px-3 py-2 text-sm font-normal text-stone-600"
+              >
+                {allRequests.length ? (
+                  allRequests.map((request) => (
+                    <option key={request.id ?? `${request.name}-${request.date}`} value={request.id ?? ""}>
+                      {request.name} - {request.service}
+                    </option>
+                  ))
+                ) : (
+                  <option value="">No requests available</option>
+                )}
+              </select>
+            </label>
+            {selectedQuoteRequest ? (
+              <div className="rounded-none border border-stone-200 bg-stone-50 p-3 text-sm text-stone-600">
+                <p className="font-semibold text-stone-950">{selectedQuoteRequest.name}</p>
+                <p className="mt-1">{selectedQuoteRequest.email || "No email"}</p>
+                <p>{selectedQuoteRequest.phone || "No phone"}</p>
+                <p className="mt-2">{selectedQuoteRequest.message || selectedQuoteRequest.service}</p>
+              </div>
+            ) : (
+              <p className="rounded-none border border-stone-200 bg-stone-50 p-3 text-sm text-stone-500">
+                No website requests are available yet.
+              </p>
+            )}
+          </div>
+          {selectedQuoteRequest ? (
+            <RequestQuoteForm key={selectedQuoteRequest.id ?? selectedQuoteRequest.name} request={selectedQuoteRequest} />
+          ) : null}
         </div>
       </Card>
       <Card title="Send Email From Request" action="Uses Resend">
@@ -996,9 +1047,9 @@ export function RequestsPage({
       <div className="grid gap-4 xl:grid-cols-[1.4fr_0.8fr]">
         <Card title="Requests Table" action="Create quote">
           <div className="overflow-x-auto">
-            <table id="requests-table" className="min-w-[980px] w-full text-left text-sm">
+            <table id="requests-table" className="min-w-[840px] w-full text-left text-sm">
               <thead className="text-xs uppercase tracking-[0.08em] text-stone-400">
-                <tr>{["Name", "Contact", "Service Requested", "Date", "Lead Source", "Status", "Actions"].map((head) => <th key={head} className="px-4 py-3 font-semibold">{head}</th>)}</tr>
+                <tr>{["Name", "Contact", "Service Requested", "Date", "Lead Source", "Status"].map((head) => <th key={head} className="px-4 py-3 font-semibold">{head}</th>)}</tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
                 {allRequests.map((request) => (
@@ -1012,19 +1063,11 @@ export function RequestsPage({
                     <td className="px-4 py-3 text-stone-600">{request.date}</td>
                     <td className="px-4 py-3 text-stone-600">{request.source}</td>
                     <td className="px-4 py-3"><Badge tone={statusTone(request.status)}>{request.status}</Badge></td>
-                    <td className="px-4 py-3">
-                      <details className="w-[280px] rounded-none border border-stone-200 bg-white">
-                        <summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-emerald-800">
-                          Create quote
-                        </summary>
-                        <RequestQuoteForm request={request} />
-                      </details>
-                    </td>
                   </tr>
                 ))}
                 {allRequests.length === 0 ? (
                   <tr>
-                    <td className="px-4 py-5 text-sm text-stone-500" colSpan={7}>
+                    <td className="px-4 py-5 text-sm text-stone-500" colSpan={6}>
                       No requests found in Supabase yet.
                     </td>
                   </tr>
@@ -1043,43 +1086,44 @@ export function RequestsPage({
 }
 
 function RequestQuoteForm({ request }: { request: DashboardRequest }) {
+  const [lineItems, setLineItems] = useState<EditableLineItem[]>([
+    makeEditableLineItem(request.service, request.message ?? ""),
+  ]);
+  const total = lineItems.reduce(
+    (sum, item) => sum + item.quantity * item.unitPrice,
+    0,
+  );
+
   return (
-    <form action="/api/dashboard/quotes" method="post" className="grid gap-2 border-t border-stone-200 p-3">
+    <form action="/api/dashboard/quotes" method="post" className="grid gap-3">
       <input type="hidden" name="quote_request_id" value={request.id ?? ""} />
       <input type="hidden" name="client_name" value={request.name} />
       <input type="hidden" name="client_email" value={request.email ?? ""} />
       <input type="hidden" name="client_phone" value={request.phone ?? ""} />
       <input type="hidden" name="service_type" value={request.service} />
-      <label className="grid gap-1 text-xs font-semibold text-stone-700">
+      <label className="grid gap-1 text-sm font-semibold text-stone-700">
         Address
-        <input name="client_address" defaultValue="" placeholder="Client address" className="rounded-none border border-stone-200 px-2 py-1.5 font-normal text-stone-600" />
+        <input
+          name="client_address"
+          defaultValue={request.address === "Address to confirm" ? "" : request.address}
+          placeholder="Client address"
+          className="rounded-none border border-stone-200 px-3 py-2 text-sm font-normal text-stone-600"
+        />
       </label>
-      <label className="grid gap-1 text-xs font-semibold text-stone-700">
-        Product/service
-        <input name="product_service" defaultValue={request.service} className="rounded-none border border-stone-200 px-2 py-1.5 font-normal text-stone-600" />
-      </label>
-      <label className="grid gap-1 text-xs font-semibold text-stone-700">
-        Description
-        <textarea name="description" rows={3} defaultValue={request.message ?? ""} className="rounded-none border border-stone-200 px-2 py-1.5 font-normal text-stone-600" />
-      </label>
-      <div className="grid grid-cols-2 gap-2">
-        <label className="grid gap-1 text-xs font-semibold text-stone-700">
-          Qty.
-          <input name="quantity" type="number" min="1" step="1" defaultValue="1" className="rounded-none border border-stone-200 px-2 py-1.5 font-normal text-stone-600" />
+      <LineItemsEditor items={lineItems} onItemsChange={setLineItems} />
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-stone-200 pt-3">
+        <p className="text-sm font-semibold text-stone-800">
+          Total: {moneyWithCents.format(total)}
+        </p>
+        <label className="flex items-center gap-2 text-sm font-semibold text-stone-700">
+          <input name="send_email" type="checkbox" className="size-4 accent-emerald-800" />
+          Send quote email
         </label>
-        <label className="grid gap-1 text-xs font-semibold text-stone-700">
-          Unit price
-          <input name="unit_price" type="number" min="0" step="0.01" placeholder="0.00" className="rounded-none border border-stone-200 px-2 py-1.5 font-normal text-stone-600" />
-        </label>
+        <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-none bg-emerald-800 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-900">
+          <FileText size={16} aria-hidden="true" />
+          Create quote
+        </button>
       </div>
-      <label className="flex items-center gap-2 text-xs font-semibold text-stone-700">
-        <input name="send_email" type="checkbox" className="size-4 accent-emerald-800" />
-        Send quote email
-      </label>
-      <button type="submit" className="inline-flex items-center justify-center gap-2 rounded-none bg-emerald-800 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-900">
-        <FileText size={14} aria-hidden="true" />
-        Create quote
-      </button>
     </form>
   );
 }
@@ -1094,6 +1138,125 @@ function getQuoteSendHref(quote: Quote, channel: string) {
   }
 
   return `mailto:${quote.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
+function makeEditableLineItem(
+  product = "Exterior service",
+  description = "",
+): EditableLineItem {
+  return {
+    id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`,
+    product,
+    description,
+    quantity: 1,
+    unitPrice: 0,
+  };
+}
+
+function LineItemsEditor({
+  items,
+  onItemsChange,
+  compact = false,
+}: {
+  items: EditableLineItem[];
+  onItemsChange: (items: EditableLineItem[]) => void;
+  compact?: boolean;
+}) {
+  const updateItem = (
+    id: string,
+    patch: Partial<Omit<EditableLineItem, "id">>,
+  ) => {
+    onItemsChange(
+      items.map((item) => (item.id === id ? { ...item, ...patch } : item)),
+    );
+  };
+  const removeItem = (id: string) => {
+    if (items.length === 1) return;
+    onItemsChange(items.filter((item) => item.id !== id));
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-semibold text-stone-800">Line items</p>
+        <button
+          type="button"
+          onClick={() => onItemsChange([...items, makeEditableLineItem("", "")])}
+          className="inline-flex items-center gap-2 rounded-none border border-stone-200 bg-white px-3 py-1.5 text-xs font-semibold text-stone-800 hover:bg-stone-100"
+        >
+          <Plus size={14} aria-hidden="true" />
+          Add item
+        </button>
+      </div>
+      <div className="space-y-3">
+        {items.map((item, index) => (
+          <div key={item.id} className="rounded-none border border-stone-200 bg-stone-50 p-3">
+            <div className="grid gap-3 lg:grid-cols-[1fr_1.15fr_80px_120px_32px]">
+              <label className="grid gap-1 text-xs font-semibold text-stone-700">
+                Product/service
+                <input
+                  name="product_service"
+                  required={index === 0}
+                  value={item.product}
+                  onChange={(event) => updateItem(item.id, { product: event.target.value })}
+                  className="rounded-none border border-stone-200 bg-white px-2 py-1.5 font-normal text-stone-600"
+                />
+              </label>
+              <label className="grid gap-1 text-xs font-semibold text-stone-700">
+                Description
+                <input
+                  name="description"
+                  value={item.description}
+                  onChange={(event) => updateItem(item.id, { description: event.target.value })}
+                  className="rounded-none border border-stone-200 bg-white px-2 py-1.5 font-normal text-stone-600"
+                />
+              </label>
+              <label className="grid gap-1 text-xs font-semibold text-stone-700">
+                Qty.
+                <input
+                  name="quantity"
+                  required={index === 0}
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={item.quantity}
+                  onChange={(event) => updateItem(item.id, { quantity: Number(event.target.value) || 1 })}
+                  className="rounded-none border border-stone-200 bg-white px-2 py-1.5 font-normal text-stone-600"
+                />
+              </label>
+              <label className="grid gap-1 text-xs font-semibold text-stone-700">
+                Unit price
+                <input
+                  name="unit_price"
+                  required={index === 0}
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={item.unitPrice}
+                  onChange={(event) => updateItem(item.id, { unitPrice: Number(event.target.value) || 0 })}
+                  className="rounded-none border border-stone-200 bg-white px-2 py-1.5 font-normal text-stone-600"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => removeItem(item.id)}
+                disabled={items.length === 1}
+                aria-label="Remove line item"
+                className="mt-5 inline-flex size-8 items-center justify-center rounded-none border border-stone-200 bg-white text-stone-500 hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <Trash2 size={14} aria-hidden="true" />
+              </button>
+            </div>
+            {!compact ? (
+              <p className="mt-2 text-right text-xs font-semibold text-stone-500">
+                {moneyWithCents.format(item.quantity * item.unitPrice)}
+              </p>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function QuoteDocumentPreview({
@@ -1441,36 +1604,38 @@ function InvoiceCreator() {
   const [clientEmail, setClientEmail] = useState("");
   const [clientPhone, setClientPhone] = useState("");
   const [clientAddress, setClientAddress] = useState("");
-  const [productService, setProductService] = useState("Exterior service");
-  const [description, setDescription] = useState("Exterior cleaning service.");
-  const [quantity, setQuantity] = useState(1);
-  const [unitPrice, setUnitPrice] = useState(0);
+  const [lineItems, setLineItems] = useState<EditableLineItem[]>([
+    makeEditableLineItem("Exterior service", "Exterior cleaning service."),
+  ]);
   const [dueAt, setDueAt] = useState("");
   const [emailMessage, setEmailMessage] = useState(
     "Hi,\n\nYour Stornway invoice is ready. Please reply here with any questions.\n\nStornway Group",
   );
+  const total = lineItems.reduce(
+    (sum, item) => sum + item.quantity * item.unitPrice,
+    0,
+  );
+  const firstLineItem = lineItems[0];
   const previewQuote: Quote = {
     client: clientName || "Client name",
     email: clientEmail,
     phone: clientPhone || "Phone to confirm",
     address: clientAddress || "Client address, Montreal, QC",
     number: "INV-Preview",
-    service: productService,
-    value: quantity * unitPrice,
+    service: firstLineItem?.product || "Exterior service",
+    value: total,
     created: new Intl.DateTimeFormat("en-US", {
       month: "long",
       day: "numeric",
       year: "numeric",
     }).format(new Date()),
     status: "Draft",
-    lineItems: [
-      {
-        product: productService || "Service",
-        description: description || "Service description",
-        quantity,
-        unitPrice,
-      },
-    ],
+    lineItems: lineItems.map((item) => ({
+      product: item.product || "Service",
+      description: item.description || "Service description",
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+    })),
   };
 
   return (
@@ -1499,24 +1664,7 @@ function InvoiceCreator() {
             Address
             <input name="client_address" value={clientAddress} onChange={(event) => setClientAddress(event.target.value)} className="rounded-none border border-stone-200 px-3 py-2 text-sm font-normal text-stone-600" />
           </label>
-          <label className="grid gap-1 text-sm font-semibold text-stone-700">
-            Product/service
-            <input name="product_service" required value={productService} onChange={(event) => setProductService(event.target.value)} className="rounded-none border border-stone-200 px-3 py-2 text-sm font-normal text-stone-600" />
-          </label>
-          <label className="grid gap-1 text-sm font-semibold text-stone-700">
-            Description
-            <textarea name="description" rows={4} value={description} onChange={(event) => setDescription(event.target.value)} className="rounded-none border border-stone-200 px-3 py-2 text-sm font-normal text-stone-600" />
-          </label>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="grid gap-1 text-sm font-semibold text-stone-700">
-              Qty.
-              <input name="quantity" required type="number" min="1" step="1" value={quantity} onChange={(event) => setQuantity(Number(event.target.value) || 1)} className="rounded-none border border-stone-200 px-3 py-2 text-sm font-normal text-stone-600" />
-            </label>
-            <label className="grid gap-1 text-sm font-semibold text-stone-700">
-              Unit price
-              <input name="unit_price" required type="number" min="0.01" step="0.01" value={unitPrice} onChange={(event) => setUnitPrice(Number(event.target.value) || 0)} className="rounded-none border border-stone-200 px-3 py-2 text-sm font-normal text-stone-600" />
-            </label>
-          </div>
+          <LineItemsEditor items={lineItems} onItemsChange={setLineItems} />
           <label className="grid gap-1 text-sm font-semibold text-stone-700">
             Email message
             <textarea
@@ -1528,6 +1676,9 @@ function InvoiceCreator() {
             />
           </label>
           <div className="flex flex-wrap gap-2">
+            <p className="mr-auto self-center text-sm font-semibold text-stone-800">
+              Total: {moneyWithCents.format(total)}
+            </p>
             <button name="intent" value="save" type="submit" className="inline-flex w-fit items-center gap-2 rounded-none border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-800 hover:bg-stone-100">
               <ReceiptText size={16} aria-hidden="true" />
               Save invoice

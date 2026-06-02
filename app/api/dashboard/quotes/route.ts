@@ -4,9 +4,9 @@ import {
   createQuote,
   escapeHtml,
   getClientFromForm,
-  getLineItemFromForm,
+  getLineItemsFromForm,
+  getLineItemsTotal,
   getOptionalFormString,
-  getTotal,
   sendDashboardEmail,
 } from "@/lib/dashboard-write";
 
@@ -15,12 +15,13 @@ export const runtime = "nodejs";
 export async function POST(request: Request) {
   const formData = await request.formData();
   const client = getClientFromForm(formData);
-  const lineItem = getLineItemFromForm(formData);
+  const lineItems = getLineItemsFromForm(formData);
+  const firstLineItem = lineItems[0];
   const quoteRequestId = getOptionalFormString(formData, "quote_request_id");
   const serviceType =
-    getOptionalFormString(formData, "service_type") || lineItem.productService;
+    getOptionalFormString(formData, "service_type") || firstLineItem.productService;
 
-  if (!client.name || !lineItem.productService || lineItem.unitPrice <= 0) {
+  if (!client.name || !firstLineItem.productService || getLineItemsTotal(lineItems) <= 0) {
     return NextResponse.redirect(
       new URL("/dashboard/requests?error=quote-fields", request.url),
       303,
@@ -31,19 +32,24 @@ export async function POST(request: Request) {
     client,
     quoteRequestId,
     serviceType,
-    lineItem,
+    lineItems,
     status: formData.get("send_email") === "on" ? "sent" : "draft",
   });
 
   if (formData.get("send_email") === "on" && client.email) {
-    const total = getTotal(lineItem);
+    const total = getLineItemsTotal(lineItems);
+    const itemSummary = lineItems
+      .map((item) => `${item.quantity} x ${escapeHtml(item.productService)} (${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(item.quantity * item.unitPrice)})`)
+      .join("<br />");
+
     await sendDashboardEmail({
       to: client.email,
       subject: `Stornway ${quote.quote_number}`,
       html: `
         <p>Hi ${escapeHtml(client.name)},</p>
-        <p>Here is your Stornway estimate for ${escapeHtml(lineItem.productService)}: <strong>${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(total)}</strong>.</p>
-        <p>${escapeHtml(lineItem.description || "Reply here with any questions or to approve the quote.")}</p>
+        <p>Here is your Stornway estimate: <strong>${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(total)}</strong>.</p>
+        <p>${itemSummary}</p>
+        <p>Reply here with any questions or to approve the quote.</p>
         <p>Stornway Group</p>
       `,
     });

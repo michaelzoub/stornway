@@ -3,9 +3,9 @@ import {
   createInvoice,
   escapeHtml,
   getClientFromForm,
-  getLineItemFromForm,
+  getLineItemsFromForm,
+  getLineItemsTotal,
   getOptionalFormString,
-  getTotal,
   sendDashboardEmail,
   updateInvoiceStatus,
 } from "@/lib/dashboard-write";
@@ -15,10 +15,11 @@ export const runtime = "nodejs";
 export async function POST(request: Request) {
   const formData = await request.formData();
   const client = getClientFromForm(formData);
-  const lineItem = getLineItemFromForm(formData);
+  const lineItems = getLineItemsFromForm(formData);
+  const firstLineItem = lineItems[0];
   const shouldSend = formData.get("intent") === "save_send";
 
-  if (!client.name || !lineItem.productService || lineItem.unitPrice <= 0) {
+  if (!client.name || !firstLineItem.productService || getLineItemsTotal(lineItems) <= 0) {
     return NextResponse.redirect(
       new URL("/dashboard/invoices?error=invoice-fields", request.url),
       303,
@@ -30,7 +31,7 @@ export async function POST(request: Request) {
     invoice = await createInvoice({
       client,
       quoteId: getOptionalFormString(formData, "quote_id"),
-      lineItem,
+      lineItems,
       dueAt: getOptionalFormString(formData, "due_at"),
     });
   } catch (error) {
@@ -49,7 +50,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const total = getTotal(lineItem);
+    const total = getLineItemsTotal(lineItems);
     const emailMessage =
       getOptionalFormString(formData, "email_message") ||
       `Hi ${client.name},\n\nYour Stornway invoice is ready. Total due: ${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(total)}.\n\nPlease reply here with any questions.\n\nStornway Group`;
