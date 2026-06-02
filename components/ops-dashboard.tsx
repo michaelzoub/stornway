@@ -1446,6 +1446,9 @@ function InvoiceCreator() {
   const [quantity, setQuantity] = useState(1);
   const [unitPrice, setUnitPrice] = useState(0);
   const [dueAt, setDueAt] = useState("");
+  const [emailMessage, setEmailMessage] = useState(
+    "Hi,\n\nYour Stornway invoice is ready. Please reply here with any questions.\n\nStornway Group",
+  );
   const previewQuote: Quote = {
     client: clientName || "Client name",
     email: clientEmail,
@@ -1477,7 +1480,7 @@ function InvoiceCreator() {
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="grid gap-1 text-sm font-semibold text-stone-700">
               Client name
-              <input name="client_name" value={clientName} onChange={(event) => setClientName(event.target.value)} className="rounded-none border border-stone-200 px-3 py-2 text-sm font-normal text-stone-600" />
+              <input name="client_name" required value={clientName} onChange={(event) => setClientName(event.target.value)} className="rounded-none border border-stone-200 px-3 py-2 text-sm font-normal text-stone-600" />
             </label>
             <label className="grid gap-1 text-sm font-semibold text-stone-700">
               Email
@@ -1498,7 +1501,7 @@ function InvoiceCreator() {
           </label>
           <label className="grid gap-1 text-sm font-semibold text-stone-700">
             Product/service
-            <input name="product_service" value={productService} onChange={(event) => setProductService(event.target.value)} className="rounded-none border border-stone-200 px-3 py-2 text-sm font-normal text-stone-600" />
+            <input name="product_service" required value={productService} onChange={(event) => setProductService(event.target.value)} className="rounded-none border border-stone-200 px-3 py-2 text-sm font-normal text-stone-600" />
           </label>
           <label className="grid gap-1 text-sm font-semibold text-stone-700">
             Description
@@ -1507,21 +1510,33 @@ function InvoiceCreator() {
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="grid gap-1 text-sm font-semibold text-stone-700">
               Qty.
-              <input name="quantity" type="number" min="1" step="1" value={quantity} onChange={(event) => setQuantity(Number(event.target.value) || 1)} className="rounded-none border border-stone-200 px-3 py-2 text-sm font-normal text-stone-600" />
+              <input name="quantity" required type="number" min="1" step="1" value={quantity} onChange={(event) => setQuantity(Number(event.target.value) || 1)} className="rounded-none border border-stone-200 px-3 py-2 text-sm font-normal text-stone-600" />
             </label>
             <label className="grid gap-1 text-sm font-semibold text-stone-700">
               Unit price
-              <input name="unit_price" type="number" min="0" step="0.01" value={unitPrice} onChange={(event) => setUnitPrice(Number(event.target.value) || 0)} className="rounded-none border border-stone-200 px-3 py-2 text-sm font-normal text-stone-600" />
+              <input name="unit_price" required type="number" min="0.01" step="0.01" value={unitPrice} onChange={(event) => setUnitPrice(Number(event.target.value) || 0)} className="rounded-none border border-stone-200 px-3 py-2 text-sm font-normal text-stone-600" />
             </label>
           </div>
-          <label className="flex items-center gap-2 text-sm font-semibold text-stone-700">
-            <input name="send_email" type="checkbox" className="size-4 accent-emerald-800" />
-            Send invoice email
+          <label className="grid gap-1 text-sm font-semibold text-stone-700">
+            Email message
+            <textarea
+              name="email_message"
+              rows={5}
+              value={emailMessage}
+              onChange={(event) => setEmailMessage(event.target.value)}
+              className="rounded-none border border-stone-200 px-3 py-2 text-sm font-normal text-stone-600"
+            />
           </label>
-          <button type="submit" className="inline-flex w-fit items-center gap-2 rounded-none bg-emerald-800 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-900">
-            <ReceiptText size={16} aria-hidden="true" />
-            Create invoice
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button name="intent" value="save" type="submit" className="inline-flex w-fit items-center gap-2 rounded-none border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-800 hover:bg-stone-100">
+              <ReceiptText size={16} aria-hidden="true" />
+              Save invoice
+            </button>
+            <button name="intent" value="save_send" type="submit" className="inline-flex w-fit items-center gap-2 rounded-none bg-emerald-800 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-900">
+              <Send size={16} aria-hidden="true" />
+              Save & send
+            </button>
+          </div>
         </form>
       </Card>
       <Card title="Invoice Preview">

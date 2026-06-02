@@ -222,6 +222,7 @@ export async function createInvoice(input: {
   quoteId?: string;
   lineItem: LineItemInput;
   dueAt?: string;
+  status?: "draft" | "sent";
 }) {
   const client = await ensureClient(input.client);
   const total = getTotal(input.lineItem);
@@ -236,7 +237,7 @@ export async function createInvoice(input: {
       invoice_number: makeInvoiceNumber(),
       quote_id: input.quoteId || null,
       client_id: client.id,
-      status: "draft",
+      status: input.status ?? "draft",
       due_at: input.dueAt || null,
       subtotal: total,
       total,
@@ -266,6 +267,18 @@ export async function createInvoice(input: {
   }
 
   return { ...invoice, client, total };
+}
+
+export async function updateInvoiceStatus(id: string, status: "draft" | "sent") {
+  const response = await supabaseFetch(`invoices?id=eq.${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Invoice status update failed: ${await response.text()}`);
+  }
 }
 
 export async function sendDashboardEmail(input: {
