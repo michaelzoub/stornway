@@ -382,7 +382,7 @@ export function getJobFromForm(formData: FormData): JobInput {
 }
 
 export async function createJob(input: JobInput) {
-  const client = await ensureClient(input.client);
+  await ensureClient(input.client);
   const response = await supabaseFetch("jobs", {
     method: "POST",
     headers: {
@@ -390,10 +390,9 @@ export async function createJob(input: JobInput) {
       Prefer: "return=representation",
     },
     body: JSON.stringify({
-      client_id: client.id,
-      client_name: client.name,
-      client_email: client.email,
-      client_phone: client.phone,
+      client_name: input.client.name,
+      client_email: input.client.email || null,
+      client_phone: input.client.phone || null,
       address: input.client.address || null,
       job_type: input.serviceType || "general",
       status: "scheduled",
@@ -424,12 +423,25 @@ export async function sendDashboardEmail(input: {
     process.env.CONTACT_FROM_EMAIL?.trim() ||
     "Stornway Group <onboarding@resend.dev>";
 
-  const { error } = await resend.emails.send({
+  const payload = {
     from,
     to: input.to,
     subject: input.subject,
     html: input.html,
-  });
+  };
+  const { error } = await resend.emails.send(payload);
+
+  if (
+    error?.message.toLowerCase().includes("domain is not verified") &&
+    !from.includes("onboarding@resend.dev")
+  ) {
+    const retry = await resend.emails.send({
+      ...payload,
+      from: "Stornway Group <onboarding@resend.dev>",
+    });
+    if (retry.error) throw new Error(retry.error.message);
+    return;
+  }
 
   if (error) throw new Error(error.message);
 }

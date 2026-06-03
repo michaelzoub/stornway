@@ -88,7 +88,12 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.redirect(
-    new URL("/dashboard/quotes?created=quote", request.url),
+    new URL(
+      formData.get("send_email") === "on"
+        ? "/dashboard/quotes?created=quote&sent=email"
+        : "/dashboard/quotes?created=quote",
+      request.url,
+    ),
     303,
   );
 }
