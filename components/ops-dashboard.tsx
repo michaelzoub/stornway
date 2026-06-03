@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useMemo, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import type {
   DashboardCustomer,
   DashboardInvoice,
@@ -154,6 +154,52 @@ function PageShell({
   eyebrow: string;
   children: ReactNode;
 }) {
+  const [notice, setNotice] = useState<{ tone: "success" | "error"; message: string } | null>(null);
+
+  useEffect(() => {
+    const setFromUrl = () => {
+    const params = new URLSearchParams(window.location.search);
+    const error = params.get("error");
+    if (params.get("sent") === "email") {
+      setNotice({ tone: "success", message: "Email sent successfully through Resend." });
+      return;
+    }
+    if (params.get("created") === "invoice") {
+      setNotice({ tone: "success", message: "Invoice saved successfully." });
+      return;
+    }
+    if (params.get("created") === "quote") {
+      setNotice({ tone: "success", message: "Quote saved successfully." });
+      return;
+    }
+    if (params.get("created") === "job") {
+      setNotice({ tone: "success", message: "Job created successfully." });
+      return;
+    }
+    if (error) {
+      const messages: Record<string, string> = {
+        "email-send": "Email could not be sent. Check the Resend sender/domain settings.",
+        "email-missing": "Email could not be sent because the client email is missing.",
+        "invoice-save": "Invoice could not be saved. Check the client and line item fields.",
+        "invoice-fields": "Invoice needs a client, product/service, and a positive price.",
+        "quote-save": "Quote could not be saved. Check the client and line item fields.",
+        "quote-fields": "Quote needs a client, product/service, and a positive price.",
+        "job-save": "Job could not be created. Check the request and schedule fields.",
+        "job-fields": "Job needs a client, service, and start time.",
+        "form-data": "The submitted form could not be read. Please try again.",
+        "send-fields": "Email needs a recipient, subject, message, and document number.",
+      };
+      setNotice({ tone: "error", message: messages[error] ?? "That action could not be completed." });
+      return;
+    }
+      setNotice(null);
+    };
+
+    setFromUrl();
+    window.addEventListener("popstate", setFromUrl);
+    return () => window.removeEventListener("popstate", setFromUrl);
+  }, []);
+
   return (
     <main className="stornway-dashboard min-h-screen overflow-x-hidden bg-[var(--fog)] text-stone-950 lg:pl-[260px]">
       <div className="min-h-screen min-w-0">
@@ -229,6 +275,24 @@ function PageShell({
                 <FilterButton label="All crews" />
               </div>
             </div>
+            {notice ? (
+              <div
+                className={`flex items-start justify-between gap-3 rounded-none border px-4 py-3 text-sm font-semibold shadow-sm ${
+                  notice.tone === "success"
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                    : "border-red-200 bg-red-50 text-red-800"
+                }`}
+              >
+                <p>{notice.message}</p>
+                <button
+                  type="button"
+                  onClick={() => setNotice(null)}
+                  className="text-xs font-semibold opacity-70 hover:opacity-100"
+                >
+                  Dismiss
+                </button>
+              </div>
+            ) : null}
             {children}
           </div>
         </section>
