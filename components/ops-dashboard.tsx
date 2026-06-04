@@ -33,7 +33,6 @@ import {
   ReceiptText,
   Search,
   Send,
-  Sparkles,
   TrendingUp,
   Trash2,
   Users,
@@ -201,18 +200,12 @@ function PageShell({
   }, []);
 
   return (
-    <main className="stornway-dashboard min-h-screen overflow-x-hidden bg-[var(--fog)] text-stone-950 lg:pl-[260px]">
+    <main className="stornway-dashboard stornway-dashboard--crm min-h-screen overflow-x-hidden bg-[var(--fog)] text-stone-950 lg:pl-[260px]">
       <div className="min-h-screen min-w-0">
         <aside className="fixed inset-y-0 left-0 z-30 hidden w-[260px] overflow-y-auto border-r border-stone-200 bg-white/95 lg:flex lg:flex-col">
           <div className="border-b border-stone-200 px-5 py-4">
             <a href="/dashboard" className="flex items-center gap-3">
-              <span className="flex size-10 items-center justify-center rounded-none bg-[#102217] text-white">
-                <Sparkles size={20} aria-hidden="true" />
-              </span>
-              <span>
-                <span className="block text-base font-semibold">Stornway</span>
-                <span className="block text-xs text-stone-500">Landscaping & Washing</span>
-              </span>
+              <img src="/stornwaylogo1.svg" alt="Stornway Group" className="dashboard-sidebar-logo" />
             </a>
           </div>
           <nav className="flex-1 space-y-1 px-3 py-4">
@@ -1435,7 +1428,7 @@ function QuoteDocumentPreview({
 
   return (
     <div className="overflow-x-auto bg-stone-100 p-3">
-      <div className="mx-auto min-h-[860px] w-[760px] bg-white px-10 py-12 text-[#27272a] shadow-sm">
+      <div className="invoice-document mx-auto min-h-[860px] w-[760px] bg-white px-10 py-12 text-[#27272a] shadow-sm">
         <div className="grid grid-cols-[190px_1fr] gap-16">
           <div className="flex size-28 items-center justify-center bg-[#071b06] p-3">
             <img src="/stornwaylogo1.svg" alt="Stornway Group" className="w-full" />

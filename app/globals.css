@@ -2694,3 +2694,367 @@ h1 span {
 .stornway-dashboard .overflow-x-auto {
   max-width: 100%;
 }
+
+.stornway-dashboard--crm {
+  --crm-bg: #0a0a0a;
+  --crm-card: #161616;
+  --crm-card-alt: #0f0f0f;
+  --crm-sidebar: #1e3a0f;
+  --crm-accent: #6aab2e;
+  --crm-accent-dark: #4a7c23;
+  --crm-border: #2a2a2a;
+  --crm-border-strong: #3a3a3a;
+  --crm-text: #ffffff;
+  --crm-muted: #a8a8a8;
+  --crm-dim: #5a5a5a;
+  --crm-danger: #c0392b;
+  --crm-warning: #e67e22;
+  background: var(--crm-bg) !important;
+  color: var(--crm-text) !important;
+}
+
+.stornway-dashboard--crm > div,
+.stornway-dashboard--crm section {
+  background: var(--crm-bg) !important;
+}
+
+.stornway-dashboard--crm aside {
+  width: 240px !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: var(--crm-sidebar) !important;
+}
+
+.stornway-dashboard--crm aside.bg-white\/95 {
+  background: var(--crm-sidebar) !important;
+}
+
+.stornway-dashboard--crm .dashboard-sidebar-logo {
+  display: block;
+  width: 210px;
+  height: 96px;
+  object-fit: contain;
+}
+
+.stornway-dashboard--crm aside > div:first-child {
+  min-height: 104px;
+  border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+  padding: 4px 12px !important;
+}
+
+.stornway-dashboard--crm aside nav {
+  padding: 8px 0 !important;
+}
+
+.stornway-dashboard--crm aside nav a {
+  min-height: 38px;
+  border-left: 3px solid transparent !important;
+  padding: 10px 16px !important;
+  color: rgba(255, 255, 255, 0.64) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.1em !important;
+  text-transform: uppercase !important;
+}
+
+.stornway-dashboard--crm aside nav a:hover,
+.stornway-dashboard--crm aside nav a:focus-visible {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: white !important;
+}
+
+.stornway-dashboard--crm aside nav a.border-l-2 {
+  border-left-color: var(--crm-accent) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: white !important;
+}
+
+.stornway-dashboard--crm aside > div:last-child {
+  border-top-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.stornway-dashboard--crm aside > div:last-child p:first-child {
+  color: rgba(255, 255, 255, 0.42) !important;
+}
+
+.stornway-dashboard--crm aside > div:last-child p:last-child {
+  color: white !important;
+}
+
+.stornway-dashboard--crm header {
+  min-height: 56px;
+  border-bottom: 1px solid var(--crm-border) !important;
+  background: var(--crm-card) !important;
+  backdrop-filter: none !important;
+}
+
+.stornway-dashboard--crm header input,
+.stornway-dashboard--crm input,
+.stornway-dashboard--crm select,
+.stornway-dashboard--crm textarea {
+  border: 1px solid var(--crm-border) !important;
+  background: #0f0f0f !important;
+  color: var(--crm-text) !important;
+  box-shadow: none !important;
+}
+
+.stornway-dashboard--crm input::placeholder,
+.stornway-dashboard--crm textarea::placeholder {
+  color: #5a5a5a !important;
+}
+
+.stornway-dashboard--crm input:focus,
+.stornway-dashboard--crm select:focus,
+.stornway-dashboard--crm textarea:focus,
+.stornway-dashboard--crm input:focus-visible,
+.stornway-dashboard--crm select:focus-visible,
+.stornway-dashboard--crm textarea:focus-visible {
+  border-color: var(--crm-accent-dark) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(106, 171, 46, 0.18) !important;
+}
+
+.stornway-dashboard--crm kbd {
+  border-color: var(--crm-border) !important;
+  background: #0f0f0f !important;
+  color: var(--crm-dim) !important;
+}
+
+.stornway-dashboard--crm .text-stone-950,
+.stornway-dashboard--crm .text-stone-800,
+.stornway-dashboard--crm .text-stone-700,
+.stornway-dashboard--crm h1,
+.stornway-dashboard--crm h2,
+.stornway-dashboard--crm h3 {
+  color: var(--crm-text) !important;
+}
+
+.stornway-dashboard--crm .text-stone-400,
+.stornway-dashboard--crm .text-stone-500,
+.stornway-dashboard--crm .text-stone-600 {
+  color: var(--crm-muted) !important;
+}
+
+.stornway-dashboard--crm h1 {
+  margin: 0 !important;
+  color: var(--crm-text) !important;
+  font-size: 20px !important;
+  font-weight: 800 !important;
+  line-height: 1.2 !important;
+  letter-spacing: 0 !important;
+}
+
+.stornway-dashboard--crm h2,
+.stornway-dashboard--crm h3,
+.stornway-dashboard--crm th,
+.stornway-dashboard--crm label,
+.stornway-dashboard--crm summary {
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+}
+
+.stornway-dashboard--crm main > div > section > div {
+  padding: 24px !important;
+}
+
+.stornway-dashboard--crm main > div > section > div > div:first-child p:first-child {
+  color: var(--crm-accent) !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.12em !important;
+}
+
+.stornway-dashboard--crm main > div > section > div > div:first-child p:last-child {
+  color: var(--crm-muted) !important;
+  font-size: 12px !important;
+}
+
+.stornway-dashboard--crm .bg-white,
+.stornway-dashboard--crm .bg-white\/90,
+.stornway-dashboard--crm .bg-white\/95,
+.stornway-dashboard--crm .bg-stone-50,
+.stornway-dashboard--crm .bg-stone-100 {
+  background-color: var(--crm-card) !important;
+}
+
+.stornway-dashboard--crm article,
+.stornway-dashboard--crm [class*="shadow-sm"],
+.stornway-dashboard--crm [class*="shadow-lg"],
+.stornway-dashboard--crm [class*="shadow-xl"] {
+  border-color: var(--crm-border) !important;
+  box-shadow: none !important;
+}
+
+.stornway-dashboard--crm article {
+  background-color: var(--crm-card);
+}
+
+.stornway-dashboard--crm article {
+  padding: 20px 22px !important;
+}
+
+.stornway-dashboard--crm article p:first-child,
+.stornway-dashboard--crm h2 {
+  color: var(--crm-dim) !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase !important;
+}
+
+.stornway-dashboard--crm article p:nth-child(2) {
+  color: var(--crm-text) !important;
+  font-size: 28px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0 !important;
+}
+
+.stornway-dashboard--crm article p:last-child {
+  color: var(--crm-dim) !important;
+  font-size: 11px !important;
+}
+
+.stornway-dashboard--crm .border-stone-100,
+.stornway-dashboard--crm .border-stone-200,
+.stornway-dashboard--crm .border-stone-300,
+.stornway-dashboard--crm .divide-stone-100 > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--crm-border) !important;
+}
+
+.stornway-dashboard--crm table {
+  border-collapse: collapse;
+  color: var(--crm-text);
+}
+
+.stornway-dashboard--crm thead {
+  background: var(--crm-bg) !important;
+}
+
+.stornway-dashboard--crm th {
+  background: var(--crm-bg) !important;
+  color: var(--crm-muted) !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+}
+
+.stornway-dashboard--crm tbody tr {
+  border-bottom: 1px solid var(--crm-border) !important;
+  background: var(--crm-card) !important;
+}
+
+.stornway-dashboard--crm tbody tr:nth-child(even) {
+  background: var(--crm-card-alt) !important;
+}
+
+.stornway-dashboard--crm tbody tr:hover {
+  background: #1e2a1a !important;
+}
+
+.stornway-dashboard--crm td {
+  color: var(--crm-text) !important;
+}
+
+.stornway-dashboard--crm button,
+.stornway-dashboard--crm a[class*="inline-flex"] {
+  border-radius: 0 !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease !important;
+}
+
+.stornway-dashboard--crm .bg-emerald-800,
+.stornway-dashboard--crm .bg-emerald-900,
+.stornway-dashboard--crm .bg-emerald-700,
+.stornway-dashboard--crm .bg-emerald-600 {
+  background-color: var(--crm-sidebar) !important;
+}
+
+.stornway-dashboard--crm .hover\:bg-emerald-900:hover,
+.stornway-dashboard--crm .hover\:bg-emerald-800:hover {
+  background-color: var(--crm-accent-dark) !important;
+}
+
+.stornway-dashboard--crm .text-emerald-700,
+.stornway-dashboard--crm .text-emerald-800,
+.stornway-dashboard--crm .text-emerald-950 {
+  color: var(--crm-accent) !important;
+}
+
+.stornway-dashboard--crm .bg-emerald-50,
+.stornway-dashboard--crm .bg-blue-50,
+.stornway-dashboard--crm .bg-violet-50,
+.stornway-dashboard--crm .bg-orange-50,
+.stornway-dashboard--crm .bg-amber-50,
+.stornway-dashboard--crm .bg-red-50,
+.stornway-dashboard--crm .bg-lime-50,
+.stornway-dashboard--crm .bg-sky-50 {
+  background-color: rgba(106, 171, 46, 0.12) !important;
+}
+
+.stornway-dashboard--crm .text-blue-700,
+.stornway-dashboard--crm .text-violet-700,
+.stornway-dashboard--crm .text-lime-700,
+.stornway-dashboard--crm .text-sky-700 {
+  color: var(--crm-accent) !important;
+}
+
+.stornway-dashboard--crm .text-orange-700,
+.stornway-dashboard--crm .text-amber-700,
+.stornway-dashboard--crm .text-amber-800 {
+  color: var(--crm-warning) !important;
+}
+
+.stornway-dashboard--crm .text-red-700,
+.stornway-dashboard--crm .text-red-800 {
+  color: var(--crm-danger) !important;
+}
+
+.stornway-dashboard--crm .ring-emerald-200,
+.stornway-dashboard--crm .ring-blue-200,
+.stornway-dashboard--crm .ring-violet-200,
+.stornway-dashboard--crm .ring-orange-200,
+.stornway-dashboard--crm .ring-amber-200,
+.stornway-dashboard--crm .ring-red-200,
+.stornway-dashboard--crm .ring-sky-200,
+.stornway-dashboard--crm .ring-stone-200 {
+  --tw-ring-color: rgba(106, 171, 46, 0.3) !important;
+}
+
+.stornway-dashboard--crm .border-emerald-700 {
+  border-color: var(--crm-accent-dark) !important;
+}
+
+.stornway-dashboard--crm details {
+  background: var(--crm-card-alt) !important;
+}
+
+.stornway-dashboard--crm summary {
+  color: var(--crm-accent) !important;
+}
+
+.stornway-dashboard--crm .invoice-document,
+.stornway-dashboard--crm .invoice-document * {
+  color: #27272a !important;
+}
+
+.stornway-dashboard--crm .invoice-document {
+  background: #ffffff !important;
+}
+
+.stornway-dashboard--crm .invoice-document table thead {
+  background: #071b06 !important;
+}
+
+.stornway-dashboard--crm .invoice-document table thead * {
+  color: #ffffff !important;
+}
+
+@media (max-width: 1023px) {
+  .stornway-dashboard--crm main > div > section > div {
+    padding: 16px !important;
+  }
+}
