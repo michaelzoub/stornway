@@ -2,12 +2,13 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requireDashboardApiRole } from "@/lib/dashboard-api-access";
 import {
   createInvoice,
-  escapeHtml,
+  getDashboardDocumentAttachment,
   getClientFromForm,
   getLineItemsFromForm,
   getLineItemsTotal,
   getOptionalFormString,
   readDashboardFormData,
+  renderDashboardDocumentEmail,
   sendDashboardEmail,
   updateInvoiceStatus,
 } from "@/lib/dashboard-write";
@@ -75,15 +76,23 @@ export async function POST(request: NextRequest) {
       `Hi ${client.name},\n\nYour Stornway invoice is ready. Total due: ${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(total)}.\n\nPlease reply here with any questions.\n\nStornway Group`;
 
     try {
+      const document = {
+        number: invoice.invoice_number,
+        documentType: "Invoice" as const,
+        client,
+        lineItems,
+        total,
+        dueAt: getOptionalFormString(formData, "due_at"),
+      };
+
       await sendDashboardEmail({
         to: client.email,
         subject: `Stornway ${invoice.invoice_number}`,
-        html: `
-          <p>${escapeHtml(emailMessage).replaceAll("\n", "<br />")}</p>
-          <hr />
-          <p><strong>Invoice:</strong> ${escapeHtml(invoice.invoice_number)}</p>
-          <p><strong>Total due:</strong> ${new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(total)}</p>
-        `,
+        html: renderDashboardDocumentEmail({
+          message: emailMessage,
+          document,
+        }),
+        attachments: [getDashboardDocumentAttachment(document)],
       });
       await updateInvoiceStatus(invoice.id, "sent");
     } catch (error) {

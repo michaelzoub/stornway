@@ -2,8 +2,12 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requireDashboardApiRole } from "@/lib/dashboard-api-access";
 import {
   escapeHtml,
+  getDashboardDocumentAttachment,
+  getInvoiceDocumentByNumber,
   getOptionalFormString,
+  getQuoteDocumentByNumber,
   readDashboardFormData,
+  renderDashboardDocumentEmail,
   sendDashboardEmail,
   updateInvoiceStatusByNumber,
   updateQuoteStatusByNumber,
@@ -42,14 +46,27 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const storedDocument =
+      documentType === "Invoice"
+        ? await getInvoiceDocumentByNumber(documentNumber)
+        : documentType === "Quote"
+          ? await getQuoteDocumentByNumber(documentNumber)
+          : null;
+
     await sendDashboardEmail({
       to,
       subject,
-      html: `
-        <p>${escapeHtml(message).replaceAll("\n", "<br />")}</p>
-        <hr />
-        <p><strong>${escapeHtml(documentType)}:</strong> ${escapeHtml(documentNumber)}</p>
-      `,
+      html: storedDocument
+        ? renderDashboardDocumentEmail({
+            message,
+            document: storedDocument,
+          })
+        : `
+          <p>${escapeHtml(message).replaceAll("\n", "<br />")}</p>
+          <hr />
+          <p><strong>${escapeHtml(documentType)}:</strong> ${escapeHtml(documentNumber)}</p>
+        `,
+      attachments: storedDocument ? [getDashboardDocumentAttachment(storedDocument)] : undefined,
     });
 
     if (documentType === "Quote") {

@@ -593,6 +593,144 @@ function RevenueHeatMap({ jobs }: { jobs: DashboardJob[] }) {
   );
 }
 
+type RouteStop = {
+  job: DashboardJob;
+  address: string;
+  lat: number;
+  lon: number;
+};
+
+type RouteState = {
+  loading: boolean;
+  stops: RouteStop[];
+  routeCoordinates: [number, number][];
+  distanceMeters: number;
+  durationSeconds: number;
+  unresolved: string[];
+  error: string;
+};
+
+const MONTREAL_CENTER = { lat: 45.5017, lon: -73.5673 };
+const MONTREAL_MAP_ZOOM = 12;
+const MONTREAL_MAP_WIDTH = 920;
+const MONTREAL_MAP_HEIGHT = 360;
+
+function normalizeMontrealAddress(address: string) {
+  const trimmed = address.trim();
+  if (!trimmed || /address to confirm/i.test(trimmed)) return "";
+  const hasMontreal = /montr[eé]al|westmount|outremont|verdun|lasalle|ndg|notre-dame-de-gr[aâ]ce/i.test(trimmed);
+  const hasProvince = /\bQC\b|qu[eé]bec/i.test(trimmed);
+  const parts = [trimmed];
+  if (!hasMontreal) parts.push("Montréal");
+  if (!hasProvince) parts.push("QC");
+  parts.push("Canada");
+  return parts.join(", ");
+}
+
+function lonLatToPixel(lon: number, lat: number, zoom = MONTREAL_MAP_ZOOM) {
+  const scale = 256 * 2 ** zoom;
+  const x = ((lon + 180) / 360) * scale;
+  const sinLat = Math.sin((lat * Math.PI) / 180);
+  const y = (0.5 - Math.log((1 + sinLat) / (1 - sinLat)) / (4 * Math.PI)) * scale;
+  return { x, y };
+}
+
+function projectMontrealPoint(lon: number, lat: number) {
+  const center = lonLatToPixel(MONTREAL_CENTER.lon, MONTREAL_CENTER.lat);
+  const point = lonLatToPixel(lon, lat);
+  return {
+    x: point.x - center.x + MONTREAL_MAP_WIDTH / 2,
+    y: point.y - center.y + MONTREAL_MAP_HEIGHT / 2,
+  };
+}
+
+function getMontrealTiles() {
+  const center = lonLatToPixel(MONTREAL_CENTER.lon, MONTREAL_CENTER.lat);
+  const centerTileX = Math.floor(center.x / 256);
+  const centerTileY = Math.floor(center.y / 256);
+  const tiles = [];
+
+  for (let dx = -2; dx <= 2; dx += 1) {
+    for (let dy = -1; dy <= 2; dy += 1) {
+      const tileX = centerTileX + dx;
+      const tileY = centerTileY + dy;
+      tiles.push({
+        key: `${tileX}-${tileY}`,
+        src: `https://tile.openstreetmap.org/${MONTREAL_MAP_ZOOM}/${tileX}/${tileY}.png`,
+        x: tileX * 256 - center.x + MONTREAL_MAP_WIDTH / 2,
+        y: tileY * 256 - center.y + MONTREAL_MAP_HEIGHT / 2,
+      });
+    }
+  }
+
+  return tiles;
+}
+
+async function geocodeMontrealJob(job: DashboardJob): Promise<RouteStop | null> {
+  const address = normalizeMontrealAddress(job.address);
+  if (!address) return null;
+
+  const cacheKey = `stornway-geocode:${address.toLowerCase()}`;
+  const cached = window.sessionStorage.getItem(cacheKey);
+  if (cached) {
+    const parsed = JSON.parse(cached) as { lat: number; lon: number };
+    return { job, address, ...parsed };
+  }
+
+  const params = new URLSearchParams({
+    q: address,
+    format: "jsonv2",
+    limit: "1",
+    countrycodes: "ca",
+    viewbox: "-73.97,45.72,-73.35,45.37",
+    bounded: "1",
+  });
+  const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`);
+  if (!response.ok) return null;
+  const [result] = (await response.json()) as Array<{ lat: string; lon: string }>;
+  if (!result) return null;
+
+  const stop = {
+    job,
+    address,
+    lat: Number(result.lat),
+    lon: Number(result.lon),
+  };
+
+  if (Number.isFinite(stop.lat) && Number.isFinite(stop.lon)) {
+    window.sessionStorage.setItem(cacheKey, JSON.stringify({ lat: stop.lat, lon: stop.lon }));
+    return stop;
+  }
+
+  return null;
+}
+
+async function fetchOsrmRoute(stops: RouteStop[]) {
+  if (stops.length < 2) {
+    return { routeCoordinates: [], distanceMeters: 0, durationSeconds: 0 };
+  }
+
+  const coordinates = stops.map((stop) => `${stop.lon},${stop.lat}`).join(";");
+  const response = await fetch(
+    `https://router.project-osrm.org/route/v1/driving/${coordinates}?overview=full&geometries=geojson&steps=false`,
+  );
+  if (!response.ok) throw new Error("OSRM route request failed.");
+
+  const body = (await response.json()) as {
+    routes?: Array<{
+      distance?: number;
+      duration?: number;
+      geometry?: { coordinates?: [number, number][] };
+    }>;
+  };
+  const route = body.routes?.[0];
+  return {
+    routeCoordinates: route?.geometry?.coordinates ?? [],
+    distanceMeters: route?.distance ?? 0,
+    durationSeconds: route?.duration ?? 0,
+  };
+}
+
 function MapPreview({
   title = "Today's Route Preview",
   rows = [],
@@ -600,29 +738,136 @@ function MapPreview({
   title?: string;
   rows?: DashboardJob[];
 }) {
-  const routeJobs = rows;
+  const routeJobs = useMemo(() => rows.slice(0, 6), [rows]);
+  const [routeState, setRouteState] = useState<RouteState>({
+    loading: false,
+    stops: [],
+    routeCoordinates: [],
+    distanceMeters: 0,
+    durationSeconds: 0,
+    unresolved: [],
+    error: "",
+  });
+  const tiles = useMemo(getMontrealTiles, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadRoute() {
+      setRouteState((current) => ({ ...current, loading: true, error: "" }));
+
+      try {
+        const settledStops = await Promise.all(
+          routeJobs.map(async (job) => ({ job, stop: await geocodeMontrealJob(job) })),
+        );
+        if (cancelled) return;
+
+        const stops = settledStops
+          .map((entry) => entry.stop)
+          .filter((stop): stop is RouteStop => Boolean(stop));
+        const unresolved = settledStops
+          .filter((entry) => !entry.stop)
+          .map((entry) => entry.job.address);
+        const route = await fetchOsrmRoute(stops);
+        if (cancelled) return;
+
+        setRouteState({
+          loading: false,
+          stops,
+          unresolved,
+          error: "",
+          ...route,
+        });
+      } catch (error) {
+        if (cancelled) return;
+        setRouteState((current) => ({
+          ...current,
+          loading: false,
+          error: error instanceof Error ? error.message : "Route could not be loaded.",
+        }));
+      }
+    }
+
+    loadRoute();
+    return () => {
+      cancelled = true;
+    };
+  }, [routeJobs]);
+
+  const routePoints = routeState.routeCoordinates
+    .map(([lon, lat]) => projectMontrealPoint(lon, lat))
+    .map((point) => `${point.x},${point.y}`)
+    .join(" ");
+  const kilometers = routeState.distanceMeters / 1000;
+  const minutes = Math.round(routeState.durationSeconds / 60);
 
   return (
     <div className="p-4">
-      <div className="relative h-64 overflow-hidden rounded-none border border-stone-200 bg-[linear-gradient(135deg,#eef2ff,#ecfdf5_45%,#e0f2fe)]">
-        <div className="absolute inset-x-0 top-1/2 h-3 -rotate-6 bg-white/70" />
-        <div className="absolute left-1/4 top-0 h-full w-3 rotate-12 bg-white/70" />
-        {routeJobs.slice(0, 5).map((job, index) => (
-          <div
-            key={job.client}
-            className="absolute flex size-9 items-center justify-center rounded-none bg-emerald-800 text-xs font-semibold text-white shadow-lg"
-            style={{ left: `${16 + index * 16}%`, top: `${24 + (index % 3) * 18}%` }}
-            title={job.address}
+      <div className="relative h-[360px] overflow-hidden rounded-none border border-stone-200 bg-stone-100">
+        <div
+          className="absolute left-1/2 top-1/2 origin-top-left -translate-x-1/2 -translate-y-1/2"
+          style={{ width: MONTREAL_MAP_WIDTH, height: MONTREAL_MAP_HEIGHT }}
+        >
+          {tiles.map((tile) => (
+            <img
+              key={tile.key}
+              src={tile.src}
+              alt=""
+              className="absolute size-[256px] select-none"
+              draggable={false}
+              style={{ left: tile.x, top: tile.y }}
+            />
+          ))}
+          <svg
+            className="absolute inset-0"
+            viewBox={`0 0 ${MONTREAL_MAP_WIDTH} ${MONTREAL_MAP_HEIGHT}`}
+            role="img"
+            aria-label="Optimized route through Montreal using OSRM"
           >
-            {index + 1}
-          </div>
-        ))}
-        <div className="absolute bottom-3 left-3 rounded-none bg-white/90 px-3 py-2 shadow-sm">
+            {routePoints ? (
+              <polyline
+                points={routePoints}
+                fill="none"
+                stroke="#1e3a0f"
+                strokeWidth="6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                opacity="0.9"
+              />
+            ) : null}
+            {routeState.stops.map((stop, index) => {
+              const point = projectMontrealPoint(stop.lon, stop.lat);
+              return (
+                <g key={`${stop.job.client}-${stop.address}`} transform={`translate(${point.x} ${point.y})`}>
+                  <circle r="15" fill="#6aab2e" stroke="#1e3a0f" strokeWidth="3" />
+                  <text y="4" textAnchor="middle" fill="#071b06" fontSize="12" fontWeight="800">
+                    {index + 1}
+                  </text>
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+        <div className="absolute bottom-3 left-3 max-w-[calc(100%-1.5rem)] rounded-none border border-stone-200 bg-white/95 px-3 py-2 shadow-sm">
           <p className="text-sm font-semibold text-stone-950">{title}</p>
           <p className="text-xs text-stone-500">
-            {routeJobs.length} stops, route to optimize, {money.format(routeJobs.reduce((sum, job) => sum + job.revenue, 0))} scheduled
+            Montréal, QC map. {routeState.loading ? "Loading route..." : `${routeState.stops.length} resolved stops`}
+            {routeState.distanceMeters ? `, ${kilometers.toFixed(1)} km, ${minutes} min via OSRM` : ""}
           </p>
+          {routeState.error ? <p className="mt-1 text-xs font-semibold text-red-700">{routeState.error}</p> : null}
+          {routeState.unresolved.length > 0 ? (
+            <p className="mt-1 text-xs text-stone-500">
+              Needs exact Montréal address: {routeState.unresolved.slice(0, 2).join("; ")}
+            </p>
+          ) : null}
         </div>
+        {routeJobs.length === 0 ? (
+          <div
+            className="absolute right-3 top-3 rounded-none border border-stone-200 bg-white/95 px-3 py-2 text-xs font-semibold text-stone-600"
+          >
+            No scheduled jobs to route.
+          </div>
+        ) : null}
       </div>
     </div>
   );
