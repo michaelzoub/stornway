@@ -5,11 +5,13 @@ import {
   getDashboardJobs,
   getDashboardQuotes,
 } from "@/lib/dashboard-data";
+import { requireDashboardRole } from "@/lib/dashboard-access";
 import { getQuoteRequests } from "@/lib/quote-requests";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
+  const role = await requireDashboardRole("home", "/dashboard");
   const [liveCustomers, liveJobs, liveQuotes, liveInvoices, liveRequests] = await Promise.all([
     getDashboardCustomers(),
     getDashboardJobs(),
@@ -25,6 +27,7 @@ export default async function DashboardPage() {
       liveQuotes={liveQuotes}
       liveInvoices={liveInvoices}
       liveRequestCount={liveRequests.length}
+      role={role}
     />
   );
 }

@@ -2,6 +2,7 @@ import {
   type DashboardRequest,
   RequestsPage,
 } from "@/components/ops-dashboard";
+import { requireDashboardRole } from "@/lib/dashboard-access";
 import { getQuoteRequests } from "@/lib/quote-requests";
 import type { ContactServiceId } from "@/lib/contact-services";
 
@@ -27,6 +28,7 @@ function formatDate(value: string) {
 }
 
 export default async function Page() {
+  const role = await requireDashboardRole("requests", "/dashboard/requests");
   let liveRequests: DashboardRequest[] = [];
 
   try {
@@ -48,5 +50,5 @@ export default async function Page() {
     console.error("[dashboard/requests] Failed to load Supabase requests:", error);
   }
 
-  return <RequestsPage liveRequests={liveRequests} />;
+  return <RequestsPage liveRequests={liveRequests} role={role} />;
 }

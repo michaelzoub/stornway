@@ -8,6 +8,10 @@ export async function POST(request: NextRequest) {
   );
   response.cookies.set(DASHBOARD_SESSION_COOKIE, "", {
     maxAge: 0,
+    path: "/",
+  });
+  response.cookies.set(DASHBOARD_SESSION_COOKIE, "", {
+    maxAge: 0,
     path: "/dashboard",
   });
 

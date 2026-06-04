@@ -1,6 +1,21 @@
 export const DASHBOARD_SESSION_COOKIE = "stornway_dashboard_session";
 export const DASHBOARD_SESSION_MAX_AGE = 60 * 60 * 24 * 7;
 
+export const DASHBOARD_ROLES = ["ADMIN", "SALESPERSON", "TECHNICIAN"] as const;
+export type DashboardRole = (typeof DASHBOARD_ROLES)[number];
+
+const ROLE_PASSWORD_ENV: Record<DashboardRole, string> = {
+  ADMIN: "DASHBOARD_ADMIN_PASSWORD",
+  SALESPERSON: "DASHBOARD_SALESPERSON_PASSWORD",
+  TECHNICIAN: "DASHBOARD_TECHNICIAN_PASSWORD",
+};
+
+export const DASHBOARD_ROLE_LABELS: Record<DashboardRole, string> = {
+  ADMIN: "Admin",
+  SALESPERSON: "Salesperson",
+  TECHNICIAN: "Technician",
+};
+
 const encoder = new TextEncoder();
 
 function getDashboardSecret(): string | null {
@@ -32,6 +47,21 @@ function stringsMatch(a: string, b: string): boolean {
   return result === 0;
 }
 
+function getRolePassword(role: DashboardRole): string | null {
+  const value = process.env[ROLE_PASSWORD_ENV[role]]?.trim();
+  if (value) return value;
+
+  if (role === "ADMIN") {
+    return process.env.DASHBOARD_PASSWORD?.trim() || null;
+  }
+
+  return null;
+}
+
+function isDashboardRole(value: string): value is DashboardRole {
+  return DASHBOARD_ROLES.includes(value as DashboardRole);
+}
+
 async function sign(message: string): Promise<string | null> {
   const secret = getDashboardSecret();
   if (!secret) return null;
@@ -48,39 +78,53 @@ async function sign(message: string): Promise<string | null> {
 }
 
 export function isDashboardPasswordConfigured(): boolean {
-  return Boolean(process.env.DASHBOARD_PASSWORD?.trim());
+  return DASHBOARD_ROLES.some((role) => Boolean(getRolePassword(role)));
 }
 
-export function isDashboardPasswordValid(password: string): boolean {
-  const configuredPassword = process.env.DASHBOARD_PASSWORD?.trim();
-  if (!configuredPassword) return false;
+export function getDashboardRoleForPassword(password: string): DashboardRole | null {
+  for (const role of DASHBOARD_ROLES) {
+    const configuredPassword = getRolePassword(role);
+    if (configuredPassword && stringsMatch(password, configuredPassword)) {
+      return role;
+    }
+  }
 
-  return stringsMatch(password, configuredPassword);
+  return null;
 }
 
-export async function createDashboardSessionValue(): Promise<string | null> {
+export async function createDashboardSessionValue(role: DashboardRole): Promise<string | null> {
   const issuedAt = Math.floor(Date.now() / 1000).toString();
-  const signature = await sign(issuedAt);
+  const message = `${issuedAt}.${role}`;
+  const signature = await sign(message);
   if (!signature) return null;
 
-  return `${issuedAt}.${signature}`;
+  return `${message}.${signature}`;
 }
 
-export async function verifyDashboardSession(value?: string): Promise<boolean> {
-  if (!value) return false;
+export async function verifyDashboardSession(value?: string): Promise<DashboardRole | null> {
+  if (!value) return null;
 
-  const [issuedAt, signature] = value.split(".");
+  const parts = value.split(".");
+  const issuedAt = parts[0];
+  const role = parts[1];
+  const signature = parts[2];
   const issuedAtSeconds = Number(issuedAt);
 
-  if (!issuedAt || !signature || !Number.isFinite(issuedAtSeconds)) {
-    return false;
+  if (
+    !issuedAt ||
+    !role ||
+    !signature ||
+    !Number.isFinite(issuedAtSeconds) ||
+    !isDashboardRole(role)
+  ) {
+    return null;
   }
 
   const now = Math.floor(Date.now() / 1000);
   if (issuedAtSeconds > now || now - issuedAtSeconds > DASHBOARD_SESSION_MAX_AGE) {
-    return false;
+    return null;
   }
 
-  const expectedSignature = await sign(issuedAt);
-  return expectedSignature ? stringsMatch(signature, expectedSignature) : false;
+  const expectedSignature = await sign(`${issuedAt}.${role}`);
+  return expectedSignature && stringsMatch(signature, expectedSignature) ? role : null;
 }

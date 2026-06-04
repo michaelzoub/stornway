@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
+import { requireDashboardApiRole } from "@/lib/dashboard-api-access";
 import {
   createInvoice,
   escapeHtml,
@@ -13,11 +14,18 @@ import {
 
 export const runtime = "nodejs";
 
-export function GET(request: Request) {
+export function GET(request: NextRequest) {
   return NextResponse.redirect(new URL("/dashboard/invoices", request.url));
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  const auth = await requireDashboardApiRole(
+    request,
+    ["ADMIN", "SALESPERSON"],
+    "/dashboard/invoices",
+  );
+  if (auth instanceof NextResponse) return auth;
+
   const formData = await readDashboardFormData(request);
   if (!formData) {
     return NextResponse.redirect(

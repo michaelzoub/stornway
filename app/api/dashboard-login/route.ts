@@ -3,9 +3,13 @@ import {
   createDashboardSessionValue,
   DASHBOARD_SESSION_COOKIE,
   DASHBOARD_SESSION_MAX_AGE,
+  getDashboardRoleForPassword,
   isDashboardPasswordConfigured,
-  isDashboardPasswordValid,
 } from "@/lib/dashboard-auth";
+import {
+  canAccessDashboardPath,
+  getDashboardRoleHome,
+} from "@/lib/dashboard-permissions";
 
 function safeNextPath(value: FormDataEntryValue | null): string {
   if (typeof value !== "string") return "/dashboard";
@@ -39,18 +43,23 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  if (typeof password !== "string" || !isDashboardPasswordValid(password)) {
+  const role = typeof password === "string" ? getDashboardRoleForPassword(password) : null;
+  if (!role) {
     return redirectToLogin(request, nextPath);
   }
 
-  const session = await createDashboardSessionValue();
+  const session = await createDashboardSessionValue(role);
   if (!session) {
     return new NextResponse("Dashboard session could not be created.", {
       status: 500,
     });
   }
 
-  const response = NextResponse.redirect(new URL(nextPath, request.url), {
+  const destination = canAccessDashboardPath(role, nextPath)
+    ? nextPath
+    : getDashboardRoleHome(role);
+
+  const response = NextResponse.redirect(new URL(destination, request.url), {
     status: 303,
   });
   response.cookies.set(DASHBOARD_SESSION_COOKIE, session, {
@@ -58,7 +67,7 @@ export async function POST(request: NextRequest) {
     maxAge: DASHBOARD_SESSION_MAX_AGE,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
-    path: "/dashboard",
+    path: "/",
   });
 
   return response;

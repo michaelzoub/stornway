@@ -16,6 +16,7 @@ export type DashboardCustomer = {
 };
 
 export type DashboardJob = {
+  id?: string;
   client: string;
   service: string;
   address: string;
@@ -72,6 +73,7 @@ type SupabaseClientRow = {
 };
 
 type SupabaseJobRow = {
+  id?: string;
   client_name?: string | null;
   client_email?: string | null;
   client_phone?: string | null;
@@ -85,6 +87,9 @@ type SupabaseJobRow = {
   completed_date?: string | null;
   created_at?: string | null;
   revenue?: number | string | null;
+  crew?: string | null;
+  assigned_crew?: string | null;
+  assigned_to?: string | null;
 };
 
 type SupabaseQuoteRow = {
@@ -275,12 +280,13 @@ export async function getDashboardJobs(): Promise<DashboardJob[]> {
   const jobs = await fetchSupabaseRows<SupabaseJobRow>("jobs");
 
   return jobs.map((job) => ({
+    id: job.id,
     client: job.client_name || job.client_email || "Client to confirm",
     service: titleCase(job.job_type),
     address: [job.address, job.city].filter(Boolean).join(", ") || "Address to confirm",
     date: formatDate(job.scheduled_start || job.completed_date || job.created_at),
     time: formatTimeRange(job.scheduled_start, job.scheduled_end),
-    crew: "Unassigned",
+    crew: job.crew || job.assigned_crew || job.assigned_to || "Unassigned",
     status: titleCase(job.status),
     revenue: toNumber(job.revenue),
   }));

@@ -41,6 +41,7 @@ import {
 } from "lucide-react";
 
 type Tone = "emerald" | "blue" | "amber" | "red" | "violet" | "stone" | "orange";
+type DashboardRole = "ADMIN" | "SALESPERSON" | "TECHNICIAN";
 
 type Kpi = {
   label: string;
@@ -79,15 +80,20 @@ const moneyWithCents = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
 });
 
-const navItems = [
-  { label: "Home", href: "/dashboard", icon: Home },
-  { label: "Schedule", href: "/dashboard/schedule", icon: CalendarDays },
-  { label: "Clients", href: "/dashboard/clients", icon: Users },
-  { label: "Requests", href: "/dashboard/requests", icon: Inbox },
-  { label: "Quotes", href: "/dashboard/quotes", icon: FileText },
-  { label: "Jobs", href: "/dashboard/jobs", icon: Wrench },
-  { label: "Invoices", href: "/dashboard/invoices", icon: ReceiptText },
-  { label: "Insights", href: "/dashboard/insights", icon: BarChart3 },
+const navItems: Array<{
+  label: string;
+  href: string;
+  icon: typeof Home;
+  roles: DashboardRole[];
+}> = [
+  { label: "Home", href: "/dashboard", icon: Home, roles: ["ADMIN"] },
+  { label: "Schedule", href: "/dashboard/schedule", icon: CalendarDays, roles: ["ADMIN"] },
+  { label: "Clients", href: "/dashboard/clients", icon: Users, roles: ["ADMIN", "SALESPERSON"] },
+  { label: "Requests", href: "/dashboard/requests", icon: Inbox, roles: ["ADMIN", "SALESPERSON"] },
+  { label: "Quotes", href: "/dashboard/quotes", icon: FileText, roles: ["ADMIN", "SALESPERSON"] },
+  { label: "Jobs", href: "/dashboard/jobs", icon: Wrench, roles: ["ADMIN", "TECHNICIAN"] },
+  { label: "Invoices", href: "/dashboard/invoices", icon: ReceiptText, roles: ["ADMIN", "SALESPERSON"] },
+  { label: "Insights", href: "/dashboard/insights", icon: BarChart3, roles: ["ADMIN"] },
 ];
 
 export type DashboardRequest = {
@@ -146,11 +152,13 @@ function PageShell({
   active,
   title,
   eyebrow,
+  role = "ADMIN",
   children,
 }: {
   active: string;
   title: string;
   eyebrow: string;
+  role?: DashboardRole;
   children: ReactNode;
 }) {
   const [notice, setNotice] = useState<{ tone: "success" | "error"; message: string } | null>(null);
@@ -175,6 +183,10 @@ function PageShell({
       setNotice({ tone: "success", message: "Job created successfully." });
       return;
     }
+    if (params.get("updated") === "job") {
+      setNotice({ tone: "success", message: "Job marked complete." });
+      return;
+    }
     if (error) {
       const messages: Record<string, string> = {
         "email-send": "Email could not be sent. Check the Resend sender/domain settings.",
@@ -185,6 +197,8 @@ function PageShell({
         "quote-fields": "Quote needs a client, product/service, and a positive price.",
         "job-save": "Job could not be created. Check the request and schedule fields.",
         "job-fields": "Job needs a client, service, and start time.",
+        "job-status-save": "Job status could not be updated. Please try again.",
+        "job-status-fields": "Job status could not be updated because the job id is missing.",
         "form-data": "The submitted form could not be read. Please try again.",
         "send-fields": "Email needs a recipient, subject, message, and document number.",
       };
@@ -209,7 +223,7 @@ function PageShell({
             </a>
           </div>
           <nav className="flex-1 space-y-1 px-3 py-4">
-            {navItems.map((item) => {
+            {navItems.filter((item) => item.roles.includes(role)).map((item) => {
               const Icon = item.icon;
               const isActive = item.label === active;
               return (
@@ -229,7 +243,7 @@ function PageShell({
             })}
           </nav>
           <div className="border-t border-stone-200 p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-stone-400">Operations</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-stone-400">{role.toLowerCase()}</p>
             <p className="mt-1 text-sm font-semibold text-stone-800">Stornway Group</p>
           </div>
         </aside>
@@ -250,7 +264,7 @@ function PageShell({
                   / 
                 </kbd>
               </div>
-              <QuickActions />
+              <QuickActions role={role} />
             </div>
           </header>
           <div className="space-y-6 p-4 lg:p-6">
@@ -294,13 +308,17 @@ function PageShell({
   );
 }
 
-function QuickActions() {
+function QuickActions({ role }: { role: DashboardRole }) {
   const actions = [
-    { label: "Create quote", href: "/dashboard/quotes#quote-delivery" },
-    { label: "Create invoice", href: "/dashboard/invoices" },
-    { label: "Schedule job", href: "/dashboard/schedule" },
-    { label: "Add client", href: "/dashboard/clients" },
-  ];
+    { label: "Create quote", href: "/dashboard/quotes#quote-delivery", roles: ["ADMIN", "SALESPERSON"] },
+    { label: "Create invoice", href: "/dashboard/invoices", roles: ["ADMIN", "SALESPERSON"] },
+    { label: "Schedule job", href: "/dashboard/schedule", roles: ["ADMIN"] },
+    { label: "Add client", href: "/dashboard/clients", roles: ["ADMIN", "SALESPERSON"] },
+  ].filter((action) => action.roles.includes(role));
+  const canSeeRequests = role === "ADMIN" || role === "SALESPERSON";
+
+  if (actions.length === 0 && !canSeeRequests) return null;
+
   return (
     <div className="hidden items-center gap-2 md:flex">
       {actions.slice(0, 2).map((action) => (
@@ -313,13 +331,15 @@ function QuickActions() {
           {action.label}
         </a>
       ))}
-      <a
-        href="/dashboard/requests"
-        className="inline-flex items-center gap-2 rounded-none border border-emerald-700 bg-white px-3 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-50"
-      >
-        <Inbox size={16} aria-hidden="true" />
-        Requests
-      </a>
+      {canSeeRequests ? (
+        <a
+          href="/dashboard/requests"
+          className="inline-flex items-center gap-2 rounded-none border border-emerald-700 bg-white px-3 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-50"
+        >
+          <Inbox size={16} aria-hidden="true" />
+          Requests
+        </a>
+      ) : null}
     </div>
   );
 }
@@ -620,11 +640,14 @@ function EmptyState({ label }: { label: string }) {
 function JobsTable({
   compact = false,
   rows = [],
+  canComplete = false,
 }: {
   compact?: boolean;
   rows?: DashboardJob[];
+  canComplete?: boolean;
 }) {
   const visibleJobs = rows.slice(0, compact ? 4 : rows.length);
+  const showActions = canComplete && visibleJobs.some((job) => job.id);
 
   return (
     <div className="overflow-x-auto">
@@ -637,6 +660,7 @@ function JobsTable({
             <th className="px-4 py-3 font-semibold">Scheduled time</th>
             <th className="px-4 py-3 font-semibold">Status</th>
             <th className="px-4 py-3 text-right font-semibold">Revenue</th>
+            {showActions ? <th className="px-4 py-3 text-right font-semibold">Action</th> : null}
           </tr>
         </thead>
         <tbody className="divide-y divide-stone-100">
@@ -648,11 +672,29 @@ function JobsTable({
               <td className="px-4 py-3 text-stone-600">{job.date}, {job.time}</td>
               <td className="px-4 py-3"><Badge tone={statusTone(job.status)}>{job.status}</Badge></td>
               <td className="px-4 py-3 text-right font-semibold text-stone-950">{money.format(job.revenue)}</td>
+              {showActions ? (
+                <td className="px-4 py-3 text-right">
+                  {job.id && job.status !== "Completed" ? (
+                    <form action="/api/dashboard/jobs/status" method="post">
+                      <input type="hidden" name="job_id" value={job.id} />
+                      <button
+                        type="submit"
+                        className="inline-flex items-center gap-2 rounded-none border border-emerald-700 bg-emerald-800 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-900"
+                      >
+                        <CheckCircle2 size={14} aria-hidden="true" />
+                        Complete
+                      </button>
+                    </form>
+                  ) : (
+                    <span className="text-xs font-semibold text-stone-400">Done</span>
+                  )}
+                </td>
+              ) : null}
             </tr>
           ))}
           {visibleJobs.length === 0 ? (
             <tr>
-              <td className="px-4 py-5 text-sm text-stone-500" colSpan={6}>
+              <td className="px-4 py-5 text-sm text-stone-500" colSpan={showActions ? 7 : 6}>
                 No jobs found in Supabase yet.
               </td>
             </tr>
@@ -689,12 +731,14 @@ export function HomeDashboardPage({
   liveQuotes = [],
   liveInvoices = [],
   liveRequestCount = 0,
+  role = "ADMIN",
 }: {
   liveCustomers?: DashboardCustomer[];
   liveJobs?: DashboardJob[];
   liveQuotes?: DashboardQuote[];
   liveInvoices?: DashboardInvoice[];
   liveRequestCount?: number;
+  role?: DashboardRole;
 }) {
   const dashboardCustomers = liveCustomers;
   const dashboardJobs = liveJobs;
@@ -721,7 +765,7 @@ export function HomeDashboardPage({
   ];
 
   return (
-    <PageShell active="Home" eyebrow="Stornway dashboard" title="Good afternoon, Stornway">
+    <PageShell active="Home" eyebrow="Stornway dashboard" title="Good afternoon, Stornway" role={role}>
       <KpiGrid
         items={[
           { label: "Revenue this month", value: money.format(dashboardJobs.reduce((sum, job) => sum + job.revenue, 0)), detail: "From Supabase jobs", tone: "emerald", icon: BadgeDollarSign },
@@ -761,12 +805,18 @@ export function HomeDashboardPage({
   );
 }
 
-export function SchedulePage({ liveJobs = [] }: { liveJobs?: DashboardJob[] }) {
+export function SchedulePage({
+  liveJobs = [],
+  role = "ADMIN",
+}: {
+  liveJobs?: DashboardJob[];
+  role?: DashboardRole;
+}) {
   const pageJobs = liveJobs;
   const revenue = pageJobs.reduce((sum, job) => sum + job.revenue, 0);
 
   return (
-    <PageShell active="Schedule" eyebrow="Daily operations" title="Schedule">
+    <PageShell active="Schedule" eyebrow="Daily operations" title="Schedule" role={role}>
       <KpiGrid
         items={[
           { label: "Jobs", value: String(pageJobs.length), detail: "From Supabase jobs", tone: "blue", icon: CalendarDays },
@@ -822,8 +872,10 @@ export function SchedulePage({ liveJobs = [] }: { liveJobs?: DashboardJob[] }) {
 
 export function ClientsPage({
   liveCustomers = [],
+  role = "ADMIN",
 }: {
   liveCustomers?: DashboardCustomer[];
+  role?: DashboardRole;
 }) {
   const pageCustomers = liveCustomers;
   const detailClient = pageCustomers[0];
@@ -835,7 +887,7 @@ export function ClientsPage({
   ).length;
 
   return (
-    <PageShell active="Clients" eyebrow="CRM" title="Clients">
+    <PageShell active="Clients" eyebrow="CRM" title="Clients" role={role}>
       <KpiGrid
         items={[
           { label: "Total clients", value: String(pageCustomers.length), detail: "From clients or quote requests", tone: "stone", icon: Users },
@@ -937,9 +989,12 @@ export function ClientsPage({
 
 export function RequestsPage({
   liveRequests = [],
+  role = "ADMIN",
 }: {
   liveRequests?: DashboardRequest[];
+  role?: DashboardRole;
 }) {
+  const canCreateJobs = role === "ADMIN";
   const stages = ["New", "Contacted", "Quote Sent", "Won", "Lost"];
   const allRequests = liveRequests;
   const requestOptions = allRequests.filter((request) => request.email);
@@ -965,7 +1020,7 @@ export function RequestsPage({
   const leadSourceSegments = getLeadSourceSegments(allRequests);
 
   return (
-    <PageShell active="Requests" eyebrow="Lead inbox" title="Requests">
+    <PageShell active="Requests" eyebrow="Lead inbox" title="Requests" role={role}>
       <KpiGrid
         items={[
           { label: "New requests", value: String(newRequests), detail: "From Supabase quote_requests", tone: "blue", icon: Inbox },
@@ -1057,39 +1112,41 @@ export function RequestsPage({
           ) : null}
         </div>
       </Card>
-      <Card title="Create Job From Request" action="Saves to jobs table">
-        <div className="grid gap-4 p-4 xl:grid-cols-[0.7fr_1.3fr]">
-          <div className="space-y-3">
-            <label className="grid gap-1 text-sm font-semibold text-stone-700">
-              Request
-              <select
-                value={selectedJobRequest?.id ?? ""}
-                onChange={(event) => setSelectedJobRequestId(event.target.value)}
-                className="rounded-none border border-stone-200 bg-white px-3 py-2 text-sm font-normal text-stone-600"
-              >
-                {allRequests.length ? (
-                  allRequests.map((request) => (
-                    <option key={request.id ?? `${request.name}-${request.date}`} value={request.id ?? ""}>
-                      {request.name} - {request.service}
-                    </option>
-                  ))
-                ) : (
-                  <option value="">No requests available</option>
-                )}
-              </select>
-            </label>
-            {selectedJobRequest ? (
-              <div className="rounded-none border border-stone-200 bg-stone-50 p-3 text-sm text-stone-600">
-                <p className="font-semibold text-stone-950">{selectedJobRequest.name}</p>
-                <p className="mt-1">{selectedJobRequest.email || "No email"}</p>
-                <p>{selectedJobRequest.phone || "No phone"}</p>
-                <p className="mt-2">{selectedJobRequest.message || selectedJobRequest.service}</p>
-              </div>
-            ) : null}
+      {canCreateJobs ? (
+        <Card title="Create Job From Request" action="Saves to jobs table">
+          <div className="grid gap-4 p-4 xl:grid-cols-[0.7fr_1.3fr]">
+            <div className="space-y-3">
+              <label className="grid gap-1 text-sm font-semibold text-stone-700">
+                Request
+                <select
+                  value={selectedJobRequest?.id ?? ""}
+                  onChange={(event) => setSelectedJobRequestId(event.target.value)}
+                  className="rounded-none border border-stone-200 bg-white px-3 py-2 text-sm font-normal text-stone-600"
+                >
+                  {allRequests.length ? (
+                    allRequests.map((request) => (
+                      <option key={request.id ?? `${request.name}-${request.date}`} value={request.id ?? ""}>
+                        {request.name} - {request.service}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="">No requests available</option>
+                  )}
+                </select>
+              </label>
+              {selectedJobRequest ? (
+                <div className="rounded-none border border-stone-200 bg-stone-50 p-3 text-sm text-stone-600">
+                  <p className="font-semibold text-stone-950">{selectedJobRequest.name}</p>
+                  <p className="mt-1">{selectedJobRequest.email || "No email"}</p>
+                  <p>{selectedJobRequest.phone || "No phone"}</p>
+                  <p className="mt-2">{selectedJobRequest.message || selectedJobRequest.service}</p>
+                </div>
+              ) : null}
+            </div>
+            {selectedJobRequest ? <RequestJobForm request={selectedJobRequest} /> : null}
           </div>
-          {selectedJobRequest ? <RequestJobForm request={selectedJobRequest} /> : null}
-        </div>
-      </Card>
+        </Card>
+      ) : null}
       <Card title="Send Email From Request" action="Uses Resend">
         <form id="request-email-composer" action="/api/dashboard/email" method="post" className="grid gap-3 p-4 lg:grid-cols-[0.8fr_1fr]">
           <div className="space-y-3">
@@ -1634,7 +1691,13 @@ function QuoteDeliveryPanel({ rows }: { rows: DashboardQuote[] }) {
   );
 }
 
-export function QuotesPage({ liveQuotes = [] }: { liveQuotes?: DashboardQuote[] }) {
+export function QuotesPage({
+  liveQuotes = [],
+  role = "ADMIN",
+}: {
+  liveQuotes?: DashboardQuote[];
+  role?: DashboardRole;
+}) {
   const pageQuotes = liveQuotes;
   const pageAcceptedQuotes = pageQuotes.filter((quote) => quote.status === "Accepted");
   const pageAcceptedForecast = pageAcceptedQuotes.reduce(
@@ -1643,7 +1706,7 @@ export function QuotesPage({ liveQuotes = [] }: { liveQuotes?: DashboardQuote[] 
   );
 
   return (
-    <PageShell active="Quotes" eyebrow="Sales pipeline" title="Quotes">
+    <PageShell active="Quotes" eyebrow="Sales pipeline" title="Quotes" role={role}>
       <KpiGrid
         items={[
           { label: "Draft quotes", value: String(pageQuotes.filter((quote) => quote.status === "Draft").length), detail: "Supabase quotes", tone: "amber", icon: ClipboardList },
@@ -1712,7 +1775,13 @@ export function QuotesPage({ liveQuotes = [] }: { liveQuotes?: DashboardQuote[] 
   );
 }
 
-export function JobsPage({ liveJobs = [] }: { liveJobs?: DashboardJob[] }) {
+export function JobsPage({
+  liveJobs = [],
+  role = "ADMIN",
+}: {
+  liveJobs?: DashboardJob[];
+  role?: DashboardRole;
+}) {
   const pageJobs = liveJobs;
   const revenue = pageJobs.reduce((sum, job) => sum + job.revenue, 0);
   const jobStatusSegments = ["Scheduled", "In Progress", "Pending", "Completed", "Delayed"].map((status, index) => ({
@@ -1722,7 +1791,7 @@ export function JobsPage({ liveJobs = [] }: { liveJobs?: DashboardJob[] }) {
   }));
 
   return (
-    <PageShell active="Jobs" eyebrow="Work management" title="Jobs">
+    <PageShell active="Jobs" eyebrow="Work management" title="Jobs" role={role}>
       <KpiGrid
         items={[
           { label: "Active jobs", value: String(pageJobs.filter((job) => ["In Progress", "Scheduled", "Pending"].includes(job.status)).length), detail: "From Supabase jobs", tone: "blue", icon: Wrench },
@@ -1737,34 +1806,8 @@ export function JobsPage({ liveJobs = [] }: { liveJobs?: DashboardJob[] }) {
         </Card>
         <Card title="Map View"><MapPreview title="Upcoming Jobs Map" rows={pageJobs} /></Card>
       </div>
-      <Card title="Jobs Table" action="Schedule job">
-        <div className="overflow-x-auto">
-          <table className="min-w-[980px] w-full text-left text-sm">
-            <thead className="text-xs uppercase tracking-[0.08em] text-stone-400">
-              <tr>{["Client", "Service", "Address", "Date", "Assigned Crew", "Revenue", "Status"].map((head) => <th key={head} className="px-4 py-3 font-semibold">{head}</th>)}</tr>
-            </thead>
-            <tbody className="divide-y divide-stone-100">
-              {pageJobs.map((job) => (
-                <tr key={`${job.client}-jobs`}>
-                  <td className="px-4 py-3 font-semibold">{job.client}</td>
-                  <td className="px-4 py-3 text-stone-600">{job.service}</td>
-                  <td className="px-4 py-3 text-stone-600">{job.address}</td>
-                  <td className="px-4 py-3 text-stone-600">{job.date}</td>
-                  <td className="px-4 py-3 text-stone-600">{job.crew}</td>
-                  <td className="px-4 py-3 font-semibold">{money.format(job.revenue)}</td>
-                  <td className="px-4 py-3"><Badge tone={statusTone(job.status)}>{job.status}</Badge></td>
-                </tr>
-              ))}
-              {pageJobs.length === 0 ? (
-                <tr>
-                  <td className="px-4 py-5 text-sm text-stone-500" colSpan={7}>
-                    No jobs found in Supabase yet.
-                  </td>
-                </tr>
-              ) : null}
-            </tbody>
-          </table>
-        </div>
+      <Card title="Jobs Table" action={role === "ADMIN" ? "Schedule job" : "Assigned work"}>
+        <JobsTable rows={pageJobs} canComplete={role === "ADMIN" || role === "TECHNICIAN"} />
       </Card>
       <EmptyState label="No jobs in this crew or service filter. Schedule a new job or change filters." />
     </PageShell>
@@ -1871,8 +1914,10 @@ function InvoiceCreator() {
 
 export function InvoicesPage({
   liveInvoices = [],
+  role = "ADMIN",
 }: {
   liveInvoices?: DashboardInvoice[];
+  role?: DashboardRole;
 }) {
   const pageInvoices = liveInvoices;
   const outstanding = pageInvoices.reduce((sum, invoice) => sum + invoice.balance, 0);
@@ -1887,7 +1932,7 @@ export function InvoicesPage({
   }));
 
   return (
-    <PageShell active="Invoices" eyebrow="Payments" title="Invoices">
+    <PageShell active="Invoices" eyebrow="Payments" title="Invoices" role={role}>
       <KpiGrid
         items={[
           { label: "Outstanding balance", value: money.format(outstanding), detail: `${pageInvoices.length} invoices in Supabase`, tone: "orange", icon: WalletCards },
@@ -1980,11 +2025,13 @@ export function InsightsPage({
   liveJobs = [],
   liveQuotes = [],
   liveInvoices = [],
+  role = "ADMIN",
 }: {
   liveCustomers?: DashboardCustomer[];
   liveJobs?: DashboardJob[];
   liveQuotes?: DashboardQuote[];
   liveInvoices?: DashboardInvoice[];
+  role?: DashboardRole;
 }) {
   const acceptedLiveQuotes = liveQuotes.filter((quote) => quote.status === "Accepted");
   const liveAcceptedForecast = acceptedLiveQuotes.reduce(
@@ -2000,7 +2047,7 @@ export function InsightsPage({
     .reduce((total, invoice) => total + invoice.paid, 0);
 
   return (
-    <PageShell active="Insights" eyebrow="Business intelligence" title="Insights">
+    <PageShell active="Insights" eyebrow="Business intelligence" title="Insights" role={role}>
       <KpiGrid
         items={[
           { label: "Repeat customer rate", value: "Not tracked", detail: "Requires repeat completed jobs", tone: "emerald", icon: Users },

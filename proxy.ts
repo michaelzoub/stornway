@@ -4,6 +4,10 @@ import {
   isDashboardPasswordConfigured,
   verifyDashboardSession,
 } from "@/lib/dashboard-auth";
+import {
+  canAccessDashboardPath,
+  getDashboardRoleHome,
+} from "@/lib/dashboard-permissions";
 
 function isLocalDevelopmentRequest(request: NextRequest): boolean {
   if (process.env.NODE_ENV === "production") return false;
@@ -20,7 +24,7 @@ function isLocalDevelopmentRequest(request: NextRequest): boolean {
 export async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
-  if (isLocalDevelopmentRequest(request)) {
+  if (isLocalDevelopmentRequest(request) && !isDashboardPasswordConfigured()) {
     return NextResponse.next();
   }
 
@@ -36,12 +40,16 @@ export async function proxy(request: NextRequest) {
 
   if (pathname === "/dashboard/login") return NextResponse.next();
 
-  const isAuthorized = await verifyDashboardSession(
+  const role = await verifyDashboardSession(
     request.cookies.get(DASHBOARD_SESSION_COOKIE)?.value,
   );
 
-  if (isAuthorized) {
+  if (role && canAccessDashboardPath(role, pathname)) {
     return NextResponse.next();
+  }
+
+  if (role) {
+    return NextResponse.redirect(new URL(getDashboardRoleHome(role), request.url));
   }
 
   const loginUrl = new URL("/dashboard/login", request.url);

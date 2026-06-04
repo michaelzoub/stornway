@@ -33,9 +33,9 @@ export default async function DashboardLoginPage({
           <LockKeyhole size={20} aria-hidden="true" />
         </div>
         <p className="dashboard-eyebrow">Stornway dashboard</p>
-        <h1 id="login-title">Quote requests</h1>
+        <h1 id="login-title">Operations access</h1>
         <p className="dashboard-login-copy">
-          Enter the dashboard password to view client quote requests.
+          Enter your role password. Admin, sales, and technician access open different dashboard modules.
         </p>
 
         <form className="dashboard-login-form" action="/api/dashboard-login" method="post">

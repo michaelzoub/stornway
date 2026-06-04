@@ -410,6 +410,21 @@ export async function createJob(input: JobInput) {
   return job;
 }
 
+export async function updateJobStatus(id: string, status: "scheduled" | "in_progress" | "completed") {
+  const response = await supabaseFetch(`jobs?id=eq.${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      status,
+      completed_date: status === "completed" ? new Date().toISOString() : null,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Job status update failed: ${await response.text()}`);
+  }
+}
+
 export async function sendDashboardEmail(input: {
   to: string;
   subject: string;
