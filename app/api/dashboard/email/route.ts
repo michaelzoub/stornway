@@ -3,6 +3,7 @@ import { requireDashboardApiRole } from "@/lib/dashboard-api-access";
 import { markQuoteRequestEmailSent } from "@/lib/quote-requests";
 import {
   escapeHtml,
+  getDashboardEmailErrorCode,
   getOptionalFormString,
   readDashboardFormData,
   sendDashboardEmail,
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("[dashboard/email] Send failed:", error);
     return NextResponse.redirect(
-      new URL("/dashboard/requests?error=email-send", request.url),
+      new URL(`/dashboard/requests?error=${getDashboardEmailErrorCode(error)}`, request.url),
       303,
     );
   }

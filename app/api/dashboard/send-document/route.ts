@@ -3,6 +3,7 @@ import { requireDashboardApiRole } from "@/lib/dashboard-api-access";
 import {
   escapeHtml,
   getDashboardDocumentAttachment,
+  getDashboardEmailErrorCode,
   getInvoiceDocumentByNumber,
   getOptionalFormString,
   getQuoteDocumentByNumber,
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("[dashboard/send-document] Send failed:", error);
     return NextResponse.redirect(
-      new URL(`${returnTo}?error=email-send`, request.url),
+      new URL(`${returnTo}?error=${getDashboardEmailErrorCode(error)}`, request.url),
       303,
     );
   }

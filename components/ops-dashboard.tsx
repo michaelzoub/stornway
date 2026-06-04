@@ -190,6 +190,9 @@ function PageShell({
     if (error) {
       const messages: Record<string, string> = {
         "email-send": "Email could not be sent. Check the Resend sender/domain settings.",
+        "resend-testing": "Resend is in test mode: it can only send to info@stornway.com. Verify stornway.com in Resend, then set CONTACT_FROM_EMAIL to an address on that domain.",
+        "resend-domain": "Resend rejected the sender domain. Verify stornway.com in Resend and use a from address on that domain.",
+        "resend-key": "RESEND_API_KEY is missing or invalid. Update the dashboard environment variables.",
         "email-missing": "Email could not be sent because the client email is missing.",
         "invoice-save": "Invoice could not be saved. Check the client and line item fields.",
         "invoice-fields": "Invoice needs a client, product/service, and a positive price.",

@@ -731,3 +731,24 @@ export async function sendDashboardEmail(input: {
 
   if (error) throw new Error(error.message);
 }
+
+export function getDashboardEmailErrorCode(error: unknown) {
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+
+  if (
+    message.includes("only send testing emails to your own email address") ||
+    message.includes("verify a domain at resend.com/domains")
+  ) {
+    return "resend-testing";
+  }
+
+  if (message.includes("domain is not verified") || message.includes("from address")) {
+    return "resend-domain";
+  }
+
+  if (message.includes("resend_api_key")) {
+    return "resend-key";
+  }
+
+  return "email-send";
+}

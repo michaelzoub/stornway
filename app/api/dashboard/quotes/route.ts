@@ -5,6 +5,7 @@ import {
   createQuote,
   escapeHtml,
   getClientFromForm,
+  getDashboardEmailErrorCode,
   getLineItemsFromForm,
   getLineItemsTotal,
   getOptionalFormString,
@@ -85,7 +86,7 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       console.error("[dashboard/quotes] Quote email failed:", error);
       return NextResponse.redirect(
-        new URL("/dashboard/quotes?created=quote&error=email-send", request.url),
+        new URL(`/dashboard/quotes?created=quote&error=${getDashboardEmailErrorCode(error)}`, request.url),
         303,
       );
     }

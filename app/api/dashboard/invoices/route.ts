@@ -3,6 +3,7 @@ import { requireDashboardApiRole } from "@/lib/dashboard-api-access";
 import {
   createInvoice,
   getDashboardDocumentAttachment,
+  getDashboardEmailErrorCode,
   getClientFromForm,
   getLineItemsFromForm,
   getLineItemsTotal,
@@ -98,7 +99,7 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       console.error("[dashboard/invoices] Invoice email failed:", error);
       return NextResponse.redirect(
-        new URL("/dashboard/invoices?created=invoice&error=email-send", request.url),
+        new URL(`/dashboard/invoices?created=invoice&error=${getDashboardEmailErrorCode(error)}`, request.url),
         303,
       );
     }
