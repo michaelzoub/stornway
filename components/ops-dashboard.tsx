@@ -707,27 +707,42 @@ async function geocodeMontrealJob(job: DashboardJob): Promise<RouteStop | null> 
 
 async function fetchOsrmRoute(stops: RouteStop[]) {
   if (stops.length < 2) {
-    return { routeCoordinates: [], distanceMeters: 0, durationSeconds: 0 };
+    return {
+      stops,
+      routeCoordinates: [],
+      distanceMeters: 0,
+      durationSeconds: 0,
+    };
   }
 
   const coordinates = stops.map((stop) => `${stop.lon},${stop.lat}`).join(";");
   const response = await fetch(
-    `https://router.project-osrm.org/route/v1/driving/${coordinates}?overview=full&geometries=geojson&steps=false`,
+    `https://router.project-osrm.org/trip/v1/driving/${coordinates}?roundtrip=false&source=first&destination=any&overview=full&geometries=geojson&steps=false`,
   );
-  if (!response.ok) throw new Error("OSRM route request failed.");
+  if (!response.ok) throw new Error("OSRM trip optimization failed.");
 
   const body = (await response.json()) as {
-    routes?: Array<{
+    trips?: Array<{
       distance?: number;
       duration?: number;
       geometry?: { coordinates?: [number, number][] };
     }>;
+    waypoints?: Array<{ waypoint_index?: number } | null>;
   };
-  const route = body.routes?.[0];
+  const trip = body.trips?.[0];
+  const optimizedStops = stops
+    .map((stop, index) => ({
+      stop,
+      order: body.waypoints?.[index]?.waypoint_index ?? index,
+    }))
+    .sort((a, b) => a.order - b.order)
+    .map((entry) => entry.stop);
+
   return {
-    routeCoordinates: route?.geometry?.coordinates ?? [],
-    distanceMeters: route?.distance ?? 0,
-    durationSeconds: route?.duration ?? 0,
+    stops: optimizedStops,
+    routeCoordinates: trip?.geometry?.coordinates ?? [],
+    distanceMeters: trip?.distance ?? 0,
+    durationSeconds: trip?.duration ?? 0,
   };
 }
 
@@ -773,7 +788,6 @@ function MapPreview({
 
         setRouteState({
           loading: false,
-          stops,
           unresolved,
           error: "",
           ...route,
@@ -822,7 +836,7 @@ function MapPreview({
             className="absolute inset-0"
             viewBox={`0 0 ${MONTREAL_MAP_WIDTH} ${MONTREAL_MAP_HEIGHT}`}
             role="img"
-            aria-label="Optimized route through Montreal using OSRM"
+            aria-label="Optimized trip route through Montreal using OSRM"
           >
             {routePoints ? (
               <polyline
@@ -851,8 +865,8 @@ function MapPreview({
         <div className="absolute bottom-3 left-3 max-w-[calc(100%-1.5rem)] rounded-none border border-stone-200 bg-white/95 px-3 py-2 shadow-sm">
           <p className="text-sm font-semibold text-stone-950">{title}</p>
           <p className="text-xs text-stone-500">
-            Montréal, QC map. {routeState.loading ? "Loading route..." : `${routeState.stops.length} resolved stops`}
-            {routeState.distanceMeters ? `, ${kilometers.toFixed(1)} km, ${minutes} min via OSRM` : ""}
+            Montréal, QC map. {routeState.loading ? "Optimizing route..." : `${routeState.stops.length} resolved stops`}
+            {routeState.distanceMeters ? `, ${kilometers.toFixed(1)} km, ${minutes} min via OSRM Trip` : ""}
           </p>
           {routeState.error ? <p className="mt-1 text-xs font-semibold text-red-700">{routeState.error}</p> : null}
           {routeState.unresolved.length > 0 ? (
